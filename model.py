@@ -1,23 +1,11 @@
-from __future__ import unicode_literals, print_function, division
-from io import open
-import unicodedata
-import string
-import re
-import random
+from __future__ import division, print_function, unicode_literals
 
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-from torch import optim
 import torch.nn.functional as F
 import torch.nn.init as init
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
-
-from collections import OrderedDict
-import math
-import numpy as np
-import time
-
+from torch.autograd import Variable
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 def binary_cross_entropy_weight(y_pred, y,has_weight=False, weight_length=1, weight_max=10):
@@ -294,12 +282,12 @@ class GRU_plain(nn.Module):
 
         for name, param in self.rnn.named_parameters():
             if 'bias' in name:
-                nn.init.constant(param, 0.25)
+                nn.init.constant_(param, 0.25)
             elif 'weight' in name:
-                nn.init.xavier_uniform(param,gain=nn.init.calculate_gain('sigmoid'))
+                nn.init.xavier_uniform_(param,gain=nn.init.calculate_gain('sigmoid'))
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                m.weight.data = init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain('relu'))
+                m.weight.data = init.xavier_uniform_(m.weight.data, gain=nn.init.calculate_gain('relu'))
 
     def init_hidden(self, batch_size):
         return Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size)).cuda()

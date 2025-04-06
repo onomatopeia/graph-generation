@@ -1,6 +1,28 @@
-from train import *
+import os
+import random
+import shutil
+from pathlib import Path
+from random import shuffle
+from time import gmtime, strftime
+
+import torch
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+from tensorboard_logger import configure
+
+import create_graphs
+from args import Args
+from data import (
+    Graph_sequence_sampler_pytorch,
+    Graph_sequence_sampler_pytorch_canonical,
+    Graph_sequence_sampler_pytorch_nobfs,
+)
+from model import GRU_plain, MLP_plain, MLP_VAE_conditional_plain
+from train import train
+from utils import save_graph_list
 
 if __name__ == '__main__':
+    print(torch.cuda.is_available())
     # All necessary arguments are defined in args.py
     args = Args()
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
@@ -20,12 +42,13 @@ if __name__ == '__main__':
     if not os.path.isdir(args.nll_save_path):
         os.makedirs(args.nll_save_path)
 
-    time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    time = strftime("%Y%m%d_%H%M%S", gmtime())
     # logging.basicConfig(filename='logs/train' + time + '.log', level=logging.DEBUG)
     if args.clean_tensorboard:
         if os.path.isdir("tensorboard"):
             shutil.rmtree("tensorboard")
-    configure("tensorboard/run"+time, flush_secs=5)
+    path = str(Path("tensorboard").joinpath("run"+ time).resolve())
+    configure(path, flush_secs=5)
 
     graphs = create_graphs.create(args)
     
