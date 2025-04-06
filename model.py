@@ -9,14 +9,14 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 def binary_cross_entropy_weight(y_pred, y,has_weight=False, weight_length=1, weight_max=10):
-    '''
+    """
 
     :param y_pred:
     :param y:
     :param weight_length: how long until the end of sequence shall we add weight
     :param weight_value: the magnitude that the weight is enhanced
     :return:
-    '''
+    """
     if has_weight:
         weight = torch.ones(y.size(0),y.size(1),y.size(2))
         weight_linear = torch.arange(1,weight_length+1)/weight_length*weight_max
@@ -40,13 +40,13 @@ def sample_tensor(y,sample=True, thresh=0.5):
     return y_result
 
 def gumbel_softmax(logits, temperature, eps=1e-9):
-    '''
+    """
 
     :param logits: shape: N*L
     :param temperature:
     :param eps:
     :return:
-    '''
+    """
     # get gumbel noise
     noise = torch.rand(logits.size())
     noise.add_(eps).log_().neg_()
@@ -67,13 +67,13 @@ def gumbel_softmax(logits, temperature, eps=1e-9):
 
 
 def gumbel_sigmoid(logits, temperature):
-    '''
+    """
 
     :param logits:
     :param temperature:
     :param eps:
     :return:
-    '''
+    """
     # get gumbel noise
     noise = torch.rand(logits.size()) # uniform(0,1)
     noise_logistic = torch.log(noise)-torch.log(1-noise) # logistic(0,1)
@@ -89,14 +89,14 @@ def gumbel_sigmoid(logits, temperature):
 # print(y)
 
 def sample_sigmoid(y, sample, thresh=0.5, sample_time=2):
-    '''
+    """
         do sampling over unnormalized score
     :param y: input
     :param sample: Bool
     :param thresh: if not sample, the threshold
-    :param sampe_time: how many times do we sample, if =1, do single sample
+    :param sample_time: how many times do we sample, if =1, do single sample
     :return: sampled result
-    '''
+    """
 
     # do sigmoid first
     y = F.sigmoid(y)
@@ -125,7 +125,7 @@ def sample_sigmoid(y, sample, thresh=0.5, sample_time=2):
 
 
 def sample_sigmoid_supervised(y_pred, y, current, y_len, sample_time=2):
-    '''
+    """
         do sampling over unnormalized score
     :param y_pred: input
     :param y: supervision
@@ -133,7 +133,7 @@ def sample_sigmoid_supervised(y_pred, y, current, y_len, sample_time=2):
     :param thresh: if not sample, the threshold
     :param sampe_time: how many times do we sample, if =1, do single sample
     :return: sampled result
-    '''
+    """
 
     # do sigmoid first
     y_pred = F.sigmoid(y_pred)
@@ -163,7 +163,7 @@ def sample_sigmoid_supervised(y_pred, y, current, y_len, sample_time=2):
     return y_result
 
 def sample_sigmoid_supervised_simple(y_pred, y, current, y_len, sample_time=2):
-    '''
+    """
         do sampling over unnormalized score
     :param y_pred: input
     :param y: supervision
@@ -171,7 +171,7 @@ def sample_sigmoid_supervised_simple(y_pred, y, current, y_len, sample_time=2):
     :param thresh: if not sample, the threshold
     :param sampe_time: how many times do we sample, if =1, do single sample
     :return: sampled result
-    '''
+    """
 
     # do sigmoid first
     y_pred = F.sigmoid(y_pred)
@@ -684,7 +684,7 @@ class Graph_RNN_structure(nn.Module):
             hidden_all_cat_select = hidden_all_cat*x
             x_sum = torch.sum(x, dim=2, keepdim=True).float()
 
-        # i.e., the model will use it's own prediction to attend
+        # i.e., the model will use its own prediction to attend
         else:
             # first mask previous hidden states
             hidden_all_cat_select = hidden_all_cat*x_pred_sample
@@ -697,17 +697,17 @@ class Graph_RNN_structure(nn.Module):
         hidden_new = hidden_new.permute(0, 2, 1)
 
         if flexible:
-            # use ground truth to maintaing history state
+            # use ground truth to maintaining history state
             if teacher_forcing:
                 x_id = torch.min(torch.nonzero(torch.squeeze(x.data)))
                 self.hidden_all = self.hidden_all[x_id:]
-            # use prediction to maintaing history state
+            # use prediction to maintaining history state
             else:
                 x_id = torch.min(torch.nonzero(torch.squeeze(x_pred_sample_long.data)))
                 start = max(len(self.hidden_all)-max_prev_node+1, x_id)
                 self.hidden_all = self.hidden_all[start:]
 
-        # maintaing a fixed size history state
+        # maintaining a fixed size history state
         else:
             # self.hidden_all.pop(0)
             self.hidden_all = self.hidden_all[1:]
@@ -1071,12 +1071,12 @@ class CNN_decoder(nn.Module):
 
 
     def forward(self, x):
-        '''
+        """
 
         :param
         x: batch * channel * length
         :return:
-        '''
+        """
         # hop1
         x = self.deconv1_1(x)
         x = self.bn1_1(x)
@@ -1163,12 +1163,12 @@ class CNN_decoder_share(nn.Module):
 
 
     def forward(self, x):
-        '''
+        """
 
         :param
         x: batch * channel * length
         :return:
-        '''
+        """
 
         # hop1
         x = self.deconv(x)
@@ -1240,12 +1240,12 @@ class CNN_decoder_attention(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x):
-        '''
+        """
 
         :param
         x: batch * channel * length
         :return:
-        '''
+        """
         # hop1
         x = self.deconv(x)
         x = self.bn(x)
@@ -1369,14 +1369,14 @@ class Graphsage_Encoder(nn.Module):
 
 
     def forward(self, nodes_list, nodes_count_list):
-        '''
+        """
 
         :param nodes: a list, each element n_i is a tensor for node's k-i hop neighbours
                 (the first nodes_hop is the furthest neighbor)
                 where n_i = N * num_neighbours * features
                nodes_count: a list, each element is a list that show how many neighbours belongs to the father node
         :return:
-        '''
+        """
 
 
         # 3-hop feature

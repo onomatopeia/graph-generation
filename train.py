@@ -512,7 +512,9 @@ def train_rnn_epoch(
     return loss_sum / (batch_idx + 1)
 
 
-def test_rnn_epoch(epoch, args, rnn, output, test_batch_size=16):
+def test_rnn_epoch(epoch, args, rnn, output, test_batch_size=16, sample_time=1):
+    if sample_time > 1:
+        raise ValueError(f'Incorrect sample time ({sample_time}, only 1 is supported for RNN')
     rnn.hidden = rnn.init_hidden(test_batch_size)
     rnn.eval()
     output.eval()
@@ -660,29 +662,33 @@ def train(args, dataset_train, rnn, output):
     scheduler_rnn = MultiStepLR(optimizer_rnn, milestones=args.milestones, gamma=args.lr_rate)
     scheduler_output = MultiStepLR(optimizer_output, milestones=args.milestones, gamma=args.lr_rate)
 
+    if 'GraphRNN_VAE' in args.note:
+        train_func = train_vae_epoch
+        pred_func = test_vae_epoch
+    elif 'GraphRNN_MLP' in args.note:
+        train_func = train_mlp_epoch
+        pred_func = test_mlp_epoch
+    elif 'GraphRNN_RNN' in args.note:
+        train_func = train_rnn_epoch
+        pred_func = test_rnn_epoch
+    else:
+        raise ValueError(f'Unknown {args.note} model type')
+
     # start main loop
     time_all = np.zeros(args.epochs)
     while epoch <= args.epochs:
         time_start = tm.time()
-        # train
-        if 'GraphRNN_VAE' in args.note:
-            train_vae_epoch(
-                epoch, args, rnn, output, dataset_train,
-                optimizer_rnn, optimizer_output,
-                scheduler_rnn, scheduler_output
-            )
-        elif 'GraphRNN_MLP' in args.note:
-            train_mlp_epoch(
-                epoch, args, rnn, output, dataset_train,
-                optimizer_rnn, optimizer_output,
-                scheduler_rnn, scheduler_output
-            )
-        elif 'GraphRNN_RNN' in args.note:
-            train_rnn_epoch(
-                epoch, args, rnn, output, dataset_train,
-                optimizer_rnn, optimizer_output,
-                scheduler_rnn, scheduler_output
-            )
+        train_func(
+            epoch,
+            args,
+            rnn,
+            output,
+            dataset_train,
+            optimizer_rnn,
+            optimizer_output,
+            scheduler_rnn,
+            scheduler_output
+        )
         time_end = tm.time()
         time_all[epoch - 1] = time_end - time_start
         # test
@@ -690,16 +696,9 @@ def train(args, dataset_train, rnn, output):
             for sample_time in range(1, 4):
                 G_pred = []
                 while len(G_pred) < args.test_total_size:
-                    if 'GraphRNN_VAE' in args.note:
-                        G_pred_step = test_vae_epoch(
-                            epoch, args, rnn, output, test_batch_size=args.test_batch_size, sample_time=sample_time
-                        )
-                    elif 'GraphRNN_MLP' in args.note:
-                        G_pred_step = test_mlp_epoch(
-                            epoch, args, rnn, output, test_batch_size=args.test_batch_size, sample_time=sample_time
-                        )
-                    elif 'GraphRNN_RNN' in args.note:
-                        G_pred_step = test_rnn_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size)
+                    G_pred_step = pred_func(
+                        epoch, args, rnn, output, test_batch_size=args.test_batch_size, sample_time=sample_time
+                    )
                     G_pred.extend(G_pred_step)
                 # save graphs
                 fname = args.graph_save_path + args.fname_pred + str(epoch) + '_' + str(sample_time) + '.dat'
