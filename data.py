@@ -10,8 +10,6 @@ import scipy.sparse as sp
 import torch
 import torch.nn as nn
 
-from utils import draw_graph_list
-
 
 # load ENZYMES and PROTEIN and DD dataset
 def Graph_load_batch(min_num_nodes=20, max_num_nodes=1000, name='ENZYMES', node_attributes=True, graph_labels=True):
@@ -71,7 +69,8 @@ def Graph_load_batch(min_num_nodes=20, max_num_nodes=1000, name='ENZYMES', node_
     print('Loaded')
     return graphs
 
-
+"""
+# TODO: move to tests
 def test_graph_load_DD():
     graphs, max_num_nodes = Graph_load_batch(min_num_nodes=10, name='DD', node_attributes=False, graph_labels=True)
     shuffle(graphs)
@@ -83,6 +82,7 @@ def test_graph_load_DD():
     col = 4
     draw_graph_list(graphs[0:row * col], row=row, col=col, fname='figures/test')
     print('max num nodes', max_num_nodes)
+"""
 
 
 def parse_index_file(filename):

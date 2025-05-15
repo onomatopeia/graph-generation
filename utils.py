@@ -6,11 +6,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
-import data
-
+from data import Graph_load
 
 def citeseer_ego():
-    _, _, G = data.Graph_load(dataset='citeseer')
+    _, _, G = Graph_load(dataset='citeseer')
     G = max([G.subgraph(c).copy() for c in nx.connected_components(G)], key=len)
     G = nx.convert_node_labels_to_integers(G)
     graphs = []
