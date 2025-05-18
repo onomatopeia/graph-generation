@@ -8,7 +8,7 @@ import pickle as pkl
 import subprocess as sp
 import time
 
-import eval.mmd as mmd
+import baselines.mmd as mmd
 
 PRINT_TIME = False
 

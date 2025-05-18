@@ -1,7 +1,11 @@
-from main import *
+import numpy as np
+import networkx as nx
 from scipy.linalg import toeplitz
-import pyemd
 import scipy.optimize as opt
+from data import Graph_load_batch
+from args import Args
+from utils import save_graph_list
+from baselines.mmd import emd
 
 def Graph_generator_baseline_train_rulebased(graphs,generator='BA'):
     graph_nodes = [graphs[i].number_of_nodes() for i in range(len(graphs))]
@@ -54,21 +58,6 @@ def Graph_generator_baseline(graph_train, pred_num=1000, generator='BA'):
                 graph_pred.append(nx.fast_gnp_random_graph(n, p))
     return graph_pred
 
-def emd_distance(x, y, distance_scaling=1.0):
-    support_size = max(len(x), len(y))
-    d_mat = toeplitz(range(support_size)).astype(np.float)
-    distance_mat = d_mat / distance_scaling
-
-    # convert histogram values x and y to float, and make them equal len
-    x = x.astype(np.float)
-    y = y.astype(np.float)
-    if len(x) < len(y):
-        x = np.hstack((x, [0.0] * (support_size - len(x))))
-    elif len(y) < len(x):
-        y = np.hstack((y, [0.0] * (support_size - len(y))))
-
-    emd = pyemd.emd(x, y, distance_mat)
-    return emd
 
 # def Loss(x,args):
 #     '''
@@ -142,7 +131,7 @@ def Loss(x,n,G_real,generator,metric):
             np.array(list(nx.clustering(G_pred).values())), bins=50, range=(0.0, 1.0), density=False)
         G_pred_hist = G_pred_hist / np.sum(G_pred_hist)
 
-    loss = emd_distance(G_real_hist,G_pred_hist)
+    loss = emd(G_real_hist,G_pred_hist)
     return loss
 
 def optimizer_brute(x_min, x_max, x_step, n, G_real, generator, metric):
@@ -248,7 +237,8 @@ if __name__ == '__main__':
     if args.graph_type == 'DD':
         graphs = Graph_load_batch(min_num_nodes=100, max_num_nodes=500, name='DD',node_attributes=False,graph_labels=True)
         args.max_prev_node = 230
-
+    if len(graphs) == 0:
+        raise ValueError(f'Unkwnown {args.graph_type} graph type')
 
     graph_nodes = [graphs[i].number_of_nodes() for i in range(len(graphs))]
     graph_edges = [graphs[i].number_of_edges() for i in range(len(graphs))]

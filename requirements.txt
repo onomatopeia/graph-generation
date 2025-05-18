@@ -1,7 +1,7 @@
 tensorboard-logger
 tensorflow==2.19.0
 networkx==3.3
-pyemd
+POT==0.9.5
 matplotlib==3.10.1
 scikit-learn==1.6.1
 python-louvain==0.16

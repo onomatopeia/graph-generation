@@ -3,11 +3,13 @@ import numpy as np
 import os
 import re
 from random import shuffle
-
+import logging 
 import eval.stats
 import utils
-# import main.Args
-from baselines.baseline_simple import *
+from args import Args
+from baselines.baseline_simple import Graph_generator_baseline
+import time
+import networkx as nx
 
 class Args_evaluate():
     def __init__(self):
@@ -19,7 +21,7 @@ class Args_evaluate():
 
         # list of dataset to evaluate
         # use a list of 1 element to evaluate a single dataset
-        self.dataset_name_all = ['caveman', 'grid', 'barabasi', 'citeseer', 'DD']
+        self.dataset_name_all = ['caveman', 'grid', 'barabasi', 'citeseer', 'DD', 'NFHS']
         # self.dataset_name_all = ['citeseer_small','caveman_small']
         # self.dataset_name_all = ['barabasi_noise0','barabasi_noise2','barabasi_noise4','barabasi_noise6','barabasi_noise8','barabasi_noise10']
         # self.dataset_name_all = ['caveman_small', 'ladder_small', 'grid_small', 'ladder_small', 'enzymes_small', 'barabasi_small','citeseer_small']
@@ -75,7 +77,7 @@ def eval_list(real_graphs_filename, pred_graphs_filename, prefix, eval_every):
             pred_g_list = utils.load_graph_list(pred_graphs_dict[result_id][epochs])
             shuffle(real_g_list)
             shuffle(pred_g_list)
-            perturbed_g_list = perturb(real_g_list, 0.05)
+            perturbed_g_list = utils.perturb(real_g_list, 0.05)
 
             #dist = eval.stats.degree_stats(real_g_list, pred_g_list)
             dist = eval.stats.clustering_stats(real_g_list, pred_g_list)
@@ -180,10 +182,12 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
             fname_test = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
                 hidden) + '_test_' + str(0) + '.dat'
         try:
+            if not os.path.exists(fname_test):
+                return None
             graph_test = utils.load_graph_list(fname_test,is_real=True)
-        except:
-            print('Not found: ' + fname_test)
-            logging.warning('Not found: ' + fname_test)
+        except Exception as e:
+            print(e)
+            logging.error(str(e))
             return None
 
         graph_test_len = len(graph_test)
@@ -208,9 +212,9 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                     # load graphs
                     try:
                         graph_pred = utils.load_graph_list(fname_pred,is_real=False) # default False
-                    except:
-                        print('Not found: '+ fname_pred)
-                        logging.warning('Not found: '+ fname_pred)
+                    except Exception as e:
+                        print(e)
+                        logging.error(str(e))
                         continue
                     # clean graphs
                     if is_clean:
@@ -268,7 +272,7 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
 
         # get MMD between ground truth and its perturbed graphs
         if model_name == 'Noise':
-            graph_validate_perturbed = perturb(graph_validate, 0.05)
+            graph_validate_perturbed = utils.perturb(graph_validate, 0.05)
             mmd_degree_validate = eval.stats.degree_stats(graph_test, graph_validate_perturbed)
             mmd_clustering_validate = eval.stats.clustering_stats(graph_test, graph_validate_perturbed)
             try:
@@ -449,7 +453,7 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
         pred_g_len_list_raw = np.array([len(pred_g_list_raw[i]) for i in range(len(pred_g_list_raw))])
         # get perturb real
         #perturbed_g_list_001 = perturb(real_g_list, 0.01)
-        perturbed_g_list_005 = perturb(real_g_list, 0.05)
+        perturbed_g_list_005 = utils.perturb(real_g_list, 0.05)
         #perturbed_g_list_010 = perturb(real_g_list, 0.10)
 
 
@@ -556,9 +560,9 @@ def eval_performance(datadir, prefix=None, args=None, eval_every=200, out_file_p
         sample_time = 2, baselines={}):
     if args is None:
         real_graphs_filename = [datadir + f for f in os.listdir(datadir)
-                if re.match(prefix + '.*real.*\.dat', f)]
+                if re.match(prefix + r'.*real.*\.dat', f)]
         pred_graphs_filename = [datadir + f for f in os.listdir(datadir)
-                if re.match(prefix + '.*pred.*\.dat', f)]
+                if re.match(prefix + r'.*pred.*\.dat', f)]
         eval_list(real_graphs_filename, pred_graphs_filename, prefix, 200)
 
     else:
@@ -634,7 +638,7 @@ if __name__ == '__main__':
     dir_prefix = args.dir_input
 
 
-    time_now = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
     if not os.path.isdir('logs/'):
         os.makedirs('logs/')
     logging.basicConfig(filename='logs/evaluate' + time_now + '.log', level=logging.INFO)
@@ -661,13 +665,14 @@ if __name__ == '__main__':
             for i in range(2, 3):
                 for j in range(30, 81):
                     for k in range(10):
-                        graphs.append(caveman_special(i,j, p_edge=0.3))
+                        graphs.append(utils.caveman_special(i,j, p_edge=0.3))
             utils.export_graphs_to_txt(graphs, output_prefix)
         elif prog_args.graph_type == 'citeseer':
             graphs = utils.citeseer_ego()
             utils.export_graphs_to_txt(graphs, output_prefix)
         else:
             # load from directory
+            raise ValueError('I still don\'t know what real_graph_filename is here, todo')
             input_path = dir_prefix + real_graph_filename
             g_list = utils.load_graph_list(input_path)
             utils.export_graphs_to_txt(g_list, output_prefix)

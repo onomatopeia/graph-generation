@@ -441,7 +441,7 @@ def pick_connected_component(G):
 
 
 def pick_connected_component_new(G):
-    adj_list = G.adjacency_list()
+    adj_list = [list(neighbors) for _, neighbors in G.adjacency()]
     for id, adj in enumerate(adj_list):
         id_min = min(adj)
         if id < id_min and id >= 1:
@@ -461,14 +461,13 @@ def load_graph_list(fname, is_real=True):
     with open(fname, "rb") as f:
         graph_list = pickle.load(f)
     for i in range(len(graph_list)):
-        edges_with_selfloops = graph_list[i].selfloop_edges()
+        edges_with_selfloops = list(nx.selfloop_edges(graph_list[i]))
         if len(edges_with_selfloops) > 0:
             graph_list[i].remove_edges_from(edges_with_selfloops)
         if is_real:
-            graph_list[i] = max(
-                [graph_list[i].subgraph(c).copy() for c in nx.connected_components(graph_list[i])],
-                key=len,
-            )
+
+            largest_cc_nodes = max(nx.connected_components(graph_list[i]), key=len)
+            graph_list[i] = graph_list[i].subgraph(largest_cc_nodes).copy()
             graph_list[i] = nx.convert_node_labels_to_integers(graph_list[i])
         else:
             graph_list[i] = pick_connected_component_new(graph_list[i])

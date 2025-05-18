@@ -127,6 +127,9 @@ def create(args):
     elif args.graph_type == 'DD':
         graphs = Graph_load_batch(min_num_nodes=100, max_num_nodes=500, name='DD',node_attributes=False,graph_labels=True)
         args.max_prev_node = 230
+    elif args.graph_type == 'NFHS':
+        graphs = Graph_load_batch(min_num_nodes=2, name='NFHS', node_attributes=True, graph_labels=False)
+        args.max_prev_node = 15
     elif args.graph_type == 'citeseer':
         _, _, G = Graph_load(dataset='citeseer')
         G = max(nx.connected_component_subgraphs(G), key=len)
@@ -151,5 +154,4 @@ def create(args):
         args.max_prev_node = 15
 
     return graphs
-
 

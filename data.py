@@ -63,6 +63,8 @@ def Graph_load_batch(min_num_nodes=20, max_num_nodes=1000, name='ENZYMES', node_
             graphs.append(G_sub)
             if G_sub.number_of_nodes() > max_nodes:
                 max_nodes = G_sub.number_of_nodes()
+        else:
+            print(f'Graph {i} not added')
             # print(G_sub.number_of_nodes(), 'i', i)
     # print('Graph dataset name: {}, total graph num: {}'.format(name, len(graphs)))
     # logging.warning('Graphs loaded, total num: {}'.format(len(graphs)))

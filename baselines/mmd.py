@@ -3,7 +3,8 @@ from functools import partial
 import networkx as nx
 import numpy as np
 from scipy.linalg import toeplitz
-import pyemd
+import ot
+
 
 def emd(x, y, distance_scaling=1.0):
     support_size = max(len(x), len(y))
@@ -18,7 +19,7 @@ def emd(x, y, distance_scaling=1.0):
     elif len(y) < len(x):
         y = np.hstack((y, [0.0] * (support_size - len(y))))
 
-    emd = pyemd.emd(x, y, distance_mat)
+    emd = ot.emd2(x, y, distance_mat)
     return emd
 
 def l2(x, y):
@@ -33,18 +34,18 @@ def gaussian_emd(x, y, sigma=1.0, distance_scaling=1.0):
       sigma: standard deviation
     '''
     support_size = max(len(x), len(y))
-    d_mat = toeplitz(range(support_size)).astype(np.float)
+    d_mat = toeplitz(range(support_size)).astype(np.float32)
     distance_mat = d_mat / distance_scaling
 
     # convert histogram values x and y to float, and make them equal len
-    x = x.astype(np.float)
-    y = y.astype(np.float)
+    x = x.astype(np.float32)
+    y = y.astype(np.float32)
     if len(x) < len(y):
         x = np.hstack((x, [0.0] * (support_size - len(x))))
     elif len(y) < len(x):
         y = np.hstack((y, [0.0] * (support_size - len(y))))
 
-    emd = pyemd.emd(x, y, distance_mat)
+    emd = ot.emd2(x, y, distance_mat)
     return np.exp(-emd * emd / (2 * sigma * sigma))
 
 def gaussian(x, y, sigma=1.0):

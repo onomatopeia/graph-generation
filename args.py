@@ -1,3 +1,4 @@
+from pathlib import Path
 
 ### program configuration
 class Args():
@@ -23,10 +24,10 @@ class Args():
         # self.graph_type = 'caveman_small'
         # self.graph_type = 'caveman_small_single'
         # self.graph_type = 'community4'
-        self.graph_type = 'grid'
+        # self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
-
+        self.graph_type = 'NFHS_small'
         # self.graph_type = 'enzymes'
         # self.graph_type = 'enzymes_small'
         # self.graph_type = 'barabasi'
@@ -58,7 +59,7 @@ class Args():
 
         self.batch_size = 32 # normal: 32, and the rest should be changed accordingly
         self.test_batch_size = 32
-        self.test_total_size = 1000
+        self.test_total_size = 2000
         self.num_layers = 4
 
         ### training config
@@ -78,7 +79,7 @@ class Args():
 
         ### output config
         # self.dir_input = "/dfs/scratch0/jiaxuany0/"
-        self.dir_input = "./"
+        self.dir_input = str(Path(__file__).parent) + '/'
         self.model_save_path = self.dir_input+'model_save/' # only for nll evaluation
         self.graph_save_path = self.dir_input+'graphs/'
         self.figure_save_path = self.dir_input+'figures/'

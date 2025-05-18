@@ -1,5 +1,6 @@
 # an implementation for "Learning Deep Generative Models of Graphs"
-from main import *
+import networkx as nx
+import torch
 
 class Args_DGMG():
     def __init__(self):
