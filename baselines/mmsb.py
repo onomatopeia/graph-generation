@@ -8,10 +8,7 @@ import edward as ed
 import networkx as nx
 import numpy as np
 import tensorflow as tf
-
-from edward.models import Bernoulli, Multinomial, Beta, Dirichlet, PointMass, Normal
-from observations import karate
-from sklearn.metrics.cluster import adjusted_rand_score
+from edward.models import Bernoulli, Beta, Dirichlet, Multinomial, PointMass
 
 import utils
 

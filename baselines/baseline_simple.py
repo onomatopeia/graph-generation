@@ -1,11 +1,11 @@
-import numpy as np
 import networkx as nx
-from scipy.linalg import toeplitz
-import scipy.optimize as opt
-from data import Graph_load_batch
+import numpy as np
+
 from args import Args
-from utils import save_graph_list
 from baselines.mmd import emd
+from data import Graph_load_batch
+from utils import save_graph_list
+
 
 def Graph_generator_baseline_train_rulebased(graphs,generator='BA'):
     graph_nodes = [graphs[i].number_of_nodes() for i in range(len(graphs))]
@@ -192,7 +192,7 @@ def Graph_generator_baseline_test(graph_nodes, parameter, generator='BA'):
     return graphs
 
 
-if __name__ == '__main__':
+def main():
     args = Args()
 
     print('File name prefix', args.fname)
@@ -263,3 +263,6 @@ if __name__ == '__main__':
     graphs_generated = Graph_generator_baseline_test(graph_nodes, parameter,generator)
 
     save_graph_list(graphs_generated,args.fname_baseline + '.dat')
+
+if __name__ == '__main__':
+    main()

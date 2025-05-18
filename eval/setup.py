@@ -1,4 +1,4 @@
-from distutils.core import setup, Extension
+from distutils.core import Extension, setup
 
 orca_module = Extension('orca',
                         sources = ['orcamodule.cpp'],

@@ -2,12 +2,12 @@ import time as tm
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from tensorboard_logger import log_value
 from torch import optim
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torch.optim.lr_scheduler import MultiStepLR
-import torch.nn.functional as F
 
 from data import decode_adj
 from model import (

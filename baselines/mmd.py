@@ -1,9 +1,9 @@
 import concurrent.futures
 from functools import partial
-import networkx as nx
+
 import numpy as np
-from scipy.linalg import toeplitz
 import ot
+from scipy.linalg import toeplitz
 
 
 def emd(x, y, distance_scaling=1.0):

@@ -8,6 +8,7 @@ import numpy as np
 
 from data import Graph_load
 
+
 def citeseer_ego():
     _, _, G = Graph_load(dataset='citeseer')
     G = max([G.subgraph(c).copy() for c in nx.connected_components(G)], key=len)

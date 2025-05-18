@@ -1,9 +1,7 @@
 import pickle as pkl
 import random
 import time
-from random import shuffle
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import scipy.sparse as sp
@@ -70,6 +68,7 @@ def Graph_load_batch(min_num_nodes=20, max_num_nodes=1000, name='ENZYMES', node_
     # logging.warning('Graphs loaded, total num: {}'.format(len(graphs)))
     print('Loaded')
     return graphs
+
 
 """
 # TODO: move to tests
@@ -1073,7 +1072,7 @@ class Graph_sequence_sampler_bfs_permute_truncate_multigraph():
         return torch.from_numpy(x_batch).float(), torch.from_numpy(y_batch).float(), \
             torch.from_numpy(adj_batch).float(), torch.from_numpy(adj_norm_batch).float(), torch.from_numpy(
             feature_batch
-            ).float()
+        ).float()
 
 
 # generate own synthetic dataset
@@ -1260,7 +1259,7 @@ class GraphDataset(torch.utils.data.Dataset):
 
     def __init__(
         self, G, hops=1, max_degree=5, vocab_size=35, embedding_dim=35, embedding=None, shuffle_neighbour=True
-        ):
+    ):
         self.G = G
         self.shuffle_neighbour = shuffle_neighbour
         self.hops = hops

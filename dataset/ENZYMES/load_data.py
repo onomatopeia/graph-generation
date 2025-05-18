@@ -1,6 +1,7 @@
-import numpy as np
-import networkx as nx
 import logging
+
+import networkx as nx
+import numpy as np
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
 

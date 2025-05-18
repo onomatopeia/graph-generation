@@ -1,15 +1,18 @@
 import argparse
-import numpy as np
+import logging
 import os
 import re
+import time
 from random import shuffle
-import logging 
+
+import networkx as nx
+import numpy as np
+
 import eval.stats
 import utils
 from args import Args
 from baselines.baseline_simple import Graph_generator_baseline
-import time
-import networkx as nx
+
 
 class Args_evaluate():
     def __init__(self):
@@ -26,13 +29,15 @@ class Args_evaluate():
         # self.dataset_name_all = ['barabasi_noise0','barabasi_noise2','barabasi_noise4','barabasi_noise6','barabasi_noise8','barabasi_noise10']
         # self.dataset_name_all = ['caveman_small', 'ladder_small', 'grid_small', 'ladder_small', 'enzymes_small', 'barabasi_small','citeseer_small']
 
-        self.epoch_start=100
-        self.epoch_end=3001
-        self.epoch_step=100
+        self.epoch_start = 100
+        self.epoch_end = 3001
+        self.epoch_step = 100
 
-def find_nearest_idx(array,value):
-    idx = (np.abs(array-value)).argmin()
+
+def find_nearest_idx(array, value):
+    idx = (np.abs(array - value)).argmin()
     return idx
+
 
 def extract_result_id_and_epoch(name, prefix, suffix):
     '''
@@ -70,7 +75,7 @@ def eval_list(real_graphs_filename, pred_graphs_filename, prefix, eval_every):
         if result_id not in pred_graphs_dict:
             pred_graphs_dict[result_id] = {}
         pred_graphs_dict[result_id][epochs] = fname
-    
+
     for result_id in real_graphs_dict.keys():
         for epochs in sorted(real_graphs_dict[result_id]):
             real_g_list = utils.load_graph_list(real_graphs_dict[result_id][epochs])
@@ -79,16 +84,16 @@ def eval_list(real_graphs_filename, pred_graphs_filename, prefix, eval_every):
             shuffle(pred_g_list)
             perturbed_g_list = utils.perturb(real_g_list, 0.05)
 
-            #dist = eval.stats.degree_stats(real_g_list, pred_g_list)
+            # dist = eval.stats.degree_stats(real_g_list, pred_g_list)
             dist = eval.stats.clustering_stats(real_g_list, pred_g_list)
             print('dist between real and pred (', result_id, ') at epoch ', epochs, ': ', dist)
-    
-            #dist = eval.stats.degree_stats(real_g_list, perturbed_g_list)
+
+            # dist = eval.stats.degree_stats(real_g_list, perturbed_g_list)
             dist = eval.stats.clustering_stats(real_g_list, perturbed_g_list)
             print('dist between real and perturbed: ', dist)
 
             mid = len(real_g_list) // 2
-            #dist = eval.stats.degree_stats(real_g_list[:mid], real_g_list[mid:])
+            # dist = eval.stats.degree_stats(real_g_list[:mid], real_g_list[mid:])
             dist = eval.stats.clustering_stats(real_g_list[:mid], real_g_list[mid:])
             print('dist among real: ', dist)
 
@@ -97,7 +102,6 @@ def compute_basic_stats(real_g_list, target_g_list):
     dist_degree = eval.stats.degree_stats(real_g_list, target_g_list)
     dist_clustering = eval.stats.clustering_stats(real_g_list, target_g_list)
     return dist_degree, dist_clustering
-
 
 
 def clean_graphs(graph_real, graph_pred):
@@ -122,6 +126,7 @@ def clean_graphs(graph_real, graph_pred):
 
     return graph_real, pred_graph_new
 
+
 def load_ground_truth(dir_input, dataset_name, model_name='GraphRNN_RNN'):
     ''' Read ground truth graphs.
     '''
@@ -129,19 +134,22 @@ def load_ground_truth(dir_input, dataset_name, model_name='GraphRNN_RNN'):
         hidden = 128
     else:
         hidden = 64
-    if model_name=='Internal' or model_name=='Noise' or model_name=='B-A' or model_name=='E-R':
+    if model_name == 'Internal' or model_name == 'Noise' or model_name == 'B-A' or model_name == 'E-R':
         fname_test = dir_input + 'GraphRNN_MLP' + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
-                hidden) + '_test_' + str(0) + '.dat'
+            hidden
+        ) + '_test_' + str(0) + '.dat'
     else:
         fname_test = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
-                hidden) + '_test_' + str(0) + '.dat'
+            hidden
+        ) + '_test_' + str(0) + '.dat'
     try:
-        graph_test = utils.load_graph_list(fname_test,is_real=True)
+        graph_test = utils.load_graph_list(fname_test, is_real=True)
     except:
         print('Not found: ' + fname_test)
         logging.warning('Not found: ' + fname_test)
         return None
     return graph_test
+
 
 def eval_single_list(graphs, dir_input, dataset_name):
     ''' Evaluate a list of graphs by comparing with graphs in directory dir_input.
@@ -151,7 +159,7 @@ def eval_single_list(graphs, dir_input, dataset_name):
     '''
     graph_test = load_ground_truth(dir_input, dataset_name)
     graph_test_len = len(graph_test)
-    graph_test = graph_test[int(0.8 * graph_test_len):] # test on a hold out test set
+    graph_test = graph_test[int(0.8 * graph_test_len):]  # test on a hold out test set
     mmd_degree = eval.stats.degree_stats(graph_test, graphs)
     mmd_clustering = eval.stats.clustering_stats(graph_test, graphs)
     try:
@@ -162,9 +170,15 @@ def eval_single_list(graphs, dir_input, dataset_name):
     print('clustering: ', mmd_clustering)
     print('orbits: ', mmd_4orbits)
 
-def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is_clean=True, epoch_start=1000,epoch_end=3001,epoch_step=100):
+
+def evaluation_epoch(
+    dir_input, fname_output, model_name, dataset_name, args, is_clean=True, epoch_start=1000, epoch_end=3001,
+    epoch_step=100
+):
     with open(fname_output, 'w+') as f:
-        f.write('sample_time,epoch,degree_validate,clustering_validate,orbits4_validate,degree_test,clustering_test,orbits4_test\n')
+        f.write(
+            'sample_time,epoch,degree_validate,clustering_validate,orbits4_validate,degree_test,clustering_test,orbits4_test\n'
+        )
 
         # TODO: Maybe refactor into a separate file/function that specifies THE naming convention
         # across main and evaluate
@@ -173,45 +187,48 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
         else:
             hidden = 64
         # read real graph
-        if model_name=='Internal' or model_name=='Noise' or model_name=='B-A' or model_name=='E-R':
+        if model_name == 'Internal' or model_name == 'Noise' or model_name == 'B-A' or model_name == 'E-R':
             fname_test = dir_input + 'GraphRNN_MLP' + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
-                hidden) + '_test_' + str(0) + '.dat'
+                hidden
+            ) + '_test_' + str(0) + '.dat'
         elif 'Baseline' in model_name:
             fname_test = dir_input + model_name + '_' + dataset_name + '_' + str(64) + '_test_' + str(0) + '.dat'
         else:
             fname_test = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
-                hidden) + '_test_' + str(0) + '.dat'
+                hidden
+            ) + '_test_' + str(0) + '.dat'
         try:
             if not os.path.exists(fname_test):
                 return None
-            graph_test = utils.load_graph_list(fname_test,is_real=True)
+            graph_test = utils.load_graph_list(fname_test, is_real=True)
         except Exception as e:
             print(e)
             logging.error(str(e))
             return None
 
         graph_test_len = len(graph_test)
-        graph_train = graph_test[0:int(0.8 * graph_test_len)] # train
-        graph_validate = graph_test[0:int(0.2 * graph_test_len)] # validate
-        graph_test = graph_test[int(0.8 * graph_test_len):] # test on a hold out test set
+        graph_train = graph_test[0:int(0.8 * graph_test_len)]  # train
+        graph_validate = graph_test[0:int(0.2 * graph_test_len)]  # validate
+        graph_test = graph_test[int(0.8 * graph_test_len):]  # test on a hold out test set
 
         graph_test_aver = 0
         for graph in graph_test:
-            graph_test_aver+=graph.number_of_nodes()
+            graph_test_aver += graph.number_of_nodes()
         graph_test_aver /= len(graph_test)
-        print('test average len',graph_test_aver)
-
+        print('test average len', graph_test_aver)
 
         # get performance for proposed approaches
         if 'GraphRNN' in model_name:
             # read test graph
-            for epoch in range(epoch_start,epoch_end,epoch_step):
-                for sample_time in range(1,4):
+            for epoch in range(epoch_start, epoch_end, epoch_step):
+                for sample_time in range(1, 4):
                     # get filename
-                    fname_pred = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(hidden) + '_pred_' + str(epoch) + '_' + str(sample_time) + '.dat'
+                    fname_pred = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
+                        hidden
+                    ) + '_pred_' + str(epoch) + '_' + str(sample_time) + '.dat'
                     # load graphs
                     try:
-                        graph_pred = utils.load_graph_list(fname_pred,is_real=False) # default False
+                        graph_pred = utils.load_graph_list(fname_pred, is_real=False)  # default False
                     except Exception as e:
                         print(e)
                         logging.error(str(e))
@@ -247,15 +264,17 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                     except:
                         mmd_4orbits_validate = -1
                     # write results
-                    f.write(str(sample_time)+','+
-                            str(epoch)+','+
-                            str(mmd_degree_validate)+','+
-                            str(mmd_clustering_validate)+','+
-                            str(mmd_4orbits_validate)+','+ 
-                            str(mmd_degree)+','+
-                            str(mmd_clustering)+','+
-                            str(mmd_4orbits)+'\n')
-                    print('degree',mmd_degree,'clustering',mmd_clustering,'orbits',mmd_4orbits)
+                    f.write(
+                        str(sample_time) + ',' +
+                        str(epoch) + ',' +
+                        str(mmd_degree_validate) + ',' +
+                        str(mmd_clustering_validate) + ',' +
+                        str(mmd_4orbits_validate) + ',' +
+                        str(mmd_degree) + ',' +
+                        str(mmd_clustering) + ',' +
+                        str(mmd_4orbits) + '\n'
+                    )
+                    print('degree', mmd_degree, 'clustering', mmd_clustering, 'orbits', mmd_4orbits)
 
         # get internal MMD (MMD between ground truth validation and test sets)
         if model_name == 'Internal':
@@ -265,10 +284,12 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                 mmd_4orbits_validate = eval.stats.orbit_stats_all(graph_test, graph_validate)
             except:
                 mmd_4orbits_validate = -1
-            f.write(str(-1) + ',' + str(-1) + ',' + str(mmd_degree_validate) + ',' + str(
-                mmd_clustering_validate) + ',' + str(mmd_4orbits_validate)
-                    + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + '\n')
-
+            f.write(
+                str(-1) + ',' + str(-1) + ',' + str(mmd_degree_validate) + ',' + str(
+                    mmd_clustering_validate
+                ) + ',' + str(mmd_4orbits_validate)
+                + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + '\n'
+            )
 
         # get MMD between ground truth and its perturbed graphs
         if model_name == 'Noise':
@@ -279,13 +300,16 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                 mmd_4orbits_validate = eval.stats.orbit_stats_all(graph_test, graph_validate_perturbed)
             except:
                 mmd_4orbits_validate = -1
-            f.write(str(-1) + ',' + str(-1) + ',' + str(mmd_degree_validate) + ',' + str(
-                mmd_clustering_validate) + ',' + str(mmd_4orbits_validate)
-                    + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + '\n')
+            f.write(
+                str(-1) + ',' + str(-1) + ',' + str(mmd_degree_validate) + ',' + str(
+                    mmd_clustering_validate
+                ) + ',' + str(mmd_4orbits_validate)
+                + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + '\n'
+            )
 
         # get E-R MMD
         if model_name == 'E-R':
-            graph_pred = Graph_generator_baseline(graph_train,generator='Gnp')
+            graph_pred = Graph_generator_baseline(graph_train, generator='Gnp')
             # clean graphs
             if is_clean:
                 graph_test, graph_pred = clean_graphs(graph_test, graph_pred)
@@ -297,9 +321,10 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                 mmd_4orbits_validate = eval.stats.orbit_stats_all(graph_test, graph_pred)
             except:
                 mmd_4orbits_validate = -1
-            f.write(str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1)
-                    + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits_validate) + '\n')
-
+            f.write(
+                str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1)
+                + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits_validate) + '\n'
+            )
 
         # get B-A MMD
         if model_name == 'B-A':
@@ -315,8 +340,10 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                 mmd_4orbits_validate = eval.stats.orbit_stats_all(graph_test, graph_pred)
             except:
                 mmd_4orbits_validate = -1
-            f.write(str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1)
-                    + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits_validate) + '\n')
+            f.write(
+                str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1) + ',' + str(-1)
+                + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits_validate) + '\n'
+            )
 
         # get performance for baseline approaches
         if 'Baseline' in model_name:
@@ -324,7 +351,8 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
             for epoch in range(epoch_start, epoch_end, epoch_step):
                 # get filename
                 fname_pred = dir_input + model_name + '_' + dataset_name + '_' + str(
-                    64) + '_pred_' + str(epoch) + '.dat'
+                    64
+                ) + '_pred_' + str(epoch) + '.dat'
                 # load graphs
                 try:
                     graph_pred = utils.load_graph_list(fname_pred, is_real=True)  # default False
@@ -363,38 +391,41 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
                 except:
                     mmd_4orbits_validate = -1
                 # write results
-                f.write(str(-1) + ',' + str(epoch) + ',' + str(mmd_degree_validate) + ',' + str(
-                    mmd_clustering_validate) + ',' + str(mmd_4orbits_validate)
-                        + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits) + '\n')
+                f.write(
+                    str(-1) + ',' + str(epoch) + ',' + str(mmd_degree_validate) + ',' + str(
+                        mmd_clustering_validate
+                    ) + ',' + str(mmd_4orbits_validate)
+                    + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits) + '\n'
+                )
                 print('degree', mmd_degree, 'clustering', mmd_clustering, 'orbits', mmd_4orbits)
-
-
 
         return True
 
-def evaluation(args_evaluate,dir_input, dir_output, model_name_all, dataset_name_all, args, overwrite = True):
+
+def evaluation(args_evaluate, dir_input, dir_output, model_name_all, dataset_name_all, args, overwrite=True):
     ''' Evaluate the performance of a set of models on a set of datasets.
     '''
     for model_name in model_name_all:
         for dataset_name in dataset_name_all:
             # check output exist
-            fname_output = dir_output+model_name+'_'+dataset_name+'.csv'
-            print('processing: '+dir_output + model_name + '_' + dataset_name + '.csv')
-            logging.info('processing: '+dir_output + model_name + '_' + dataset_name + '.csv')
-            if overwrite==False and os.path.isfile(fname_output):
-                print(dir_output+model_name+'_'+dataset_name+'.csv exists!')
-                logging.info(dir_output+model_name+'_'+dataset_name+'.csv exists!')
+            fname_output = dir_output + model_name + '_' + dataset_name + '.csv'
+            print('processing: ' + dir_output + model_name + '_' + dataset_name + '.csv')
+            logging.info('processing: ' + dir_output + model_name + '_' + dataset_name + '.csv')
+            if overwrite == False and os.path.isfile(fname_output):
+                print(dir_output + model_name + '_' + dataset_name + '.csv exists!')
+                logging.info(dir_output + model_name + '_' + dataset_name + '.csv exists!')
                 continue
-            evaluation_epoch(dir_input,fname_output,model_name,dataset_name,args,is_clean=True, epoch_start=args_evaluate.epoch_start,epoch_end=args_evaluate.epoch_end,epoch_step=args_evaluate.epoch_step)
+            evaluation_epoch(
+                dir_input, fname_output, model_name, dataset_name, args, is_clean=True,
+                epoch_start=args_evaluate.epoch_start, epoch_end=args_evaluate.epoch_end,
+                epoch_step=args_evaluate.epoch_step
+            )
 
 
-
-
-
-
-
-def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
-        eval_every, epoch_range=None, out_file_prefix=None):
+def eval_list_fname(
+    real_graph_filename, pred_graphs_filename, baselines,
+    eval_every, epoch_range=None, out_file_prefix=None
+):
     ''' Evaluate list of predicted graphs compared to ground truth, stored in files.
     Args:
         baselines: dict mapping name of the baseline to list of generated graphs.
@@ -402,12 +433,12 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
 
     if out_file_prefix is not None:
         out_files = {
-                'train': open(out_file_prefix + '_train.txt', 'w+'),
-                'compare': open(out_file_prefix + '_compare.txt', 'w+')
+            'train': open(out_file_prefix + '_train.txt', 'w+'),
+            'compare': open(out_file_prefix + '_compare.txt', 'w+')
         }
 
     out_files['train'].write('degree,clustering,orbits4\n')
-    
+
     line = 'metric,real,ours,perturbed'
     for bl in baselines:
         line += ',' + bl
@@ -415,34 +446,36 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
     out_files['compare'].write(line)
 
     results = {
-            'deg': {
-                    'real': 0,
-                    'ours': 100, # take min over all training epochs
-                    'perturbed': 0,
-                    'kron': 0},
-            'clustering': {
-                    'real': 0,
-                    'ours': 100,
-                    'perturbed': 0,
-                    'kron': 0},
-            'orbits4': {
-                    'real': 0,
-                    'ours': 100,
-                    'perturbed': 0,
-                    'kron': 0}
+        'deg': {
+            'real': 0,
+            'ours': 100,  # take min over all training epochs
+            'perturbed': 0,
+            'kron': 0
+        },
+        'clustering': {
+            'real': 0,
+            'ours': 100,
+            'perturbed': 0,
+            'kron': 0
+        },
+        'orbits4': {
+            'real': 0,
+            'ours': 100,
+            'perturbed': 0,
+            'kron': 0
+        }
     }
-
 
     num_evals = len(pred_graphs_filename)
     if epoch_range is None:
-        epoch_range = [i * eval_every for i in range(num_evals)] 
+        epoch_range = [i * eval_every for i in range(num_evals)]
     for i in range(num_evals):
         real_g_list = utils.load_graph_list(real_graph_filename)
-        #pred_g_list = utils.load_graph_list(pred_graphs_filename[i])
+        # pred_g_list = utils.load_graph_list(pred_graphs_filename[i])
 
         # contains all predicted G
         pred_g_list_raw = utils.load_graph_list(pred_graphs_filename[i])
-        if len(real_g_list)>200:
+        if len(real_g_list) > 200:
             real_g_list = real_g_list[0:200]
 
         shuffle(real_g_list)
@@ -452,10 +485,9 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
         real_g_len_list = np.array([len(real_g_list[i]) for i in range(len(real_g_list))])
         pred_g_len_list_raw = np.array([len(pred_g_list_raw[i]) for i in range(len(pred_g_list_raw))])
         # get perturb real
-        #perturbed_g_list_001 = perturb(real_g_list, 0.01)
+        # perturbed_g_list_001 = perturb(real_g_list, 0.01)
         perturbed_g_list_005 = utils.perturb(real_g_list, 0.05)
-        #perturbed_g_list_010 = perturb(real_g_list, 0.10)
-
+        # perturbed_g_list_010 = perturb(real_g_list, 0.10)
 
         # select pred samples
         # The number of nodes are sampled from the similar distribution as the training set
@@ -474,10 +506,14 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
         print('################## epoch {} ##################'.format(epoch_range[i]))
 
         # info about graph size
-        print('real average nodes',
-              sum([real_g_list[i].number_of_nodes() for i in range(len(real_g_list))]) / len(real_g_list))
-        print('pred average nodes',
-              sum([pred_g_list[i].number_of_nodes() for i in range(len(pred_g_list))]) / len(pred_g_list))
+        print(
+            'real average nodes',
+            sum([real_g_list[i].number_of_nodes() for i in range(len(real_g_list))]) / len(real_g_list)
+        )
+        print(
+            'pred average nodes',
+            sum([pred_g_list[i].number_of_nodes() for i in range(len(pred_g_list))]) / len(pred_g_list)
+        )
         print('num of real graphs', len(real_g_list))
         print('num of pred graphs', len(pred_g_list))
 
@@ -486,22 +522,22 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
         # ========================================
         mid = len(real_g_list) // 2
         dist_degree, dist_clustering = compute_basic_stats(real_g_list[:mid], real_g_list[mid:])
-        #dist_4cycle = eval.stats.motif_stats(real_g_list[:mid], real_g_list[mid:])
+        # dist_4cycle = eval.stats.motif_stats(real_g_list[:mid], real_g_list[mid:])
         dist_4orbits = eval.stats.orbit_stats_all(real_g_list[:mid], real_g_list[mid:])
         print('degree dist among real: ', dist_degree)
         print('clustering dist among real: ', dist_clustering)
-        #print('4 cycle dist among real: ', dist_4cycle)
+        # print('4 cycle dist among real: ', dist_4cycle)
         print('orbits dist among real: ', dist_4orbits)
         results['deg']['real'] += dist_degree
         results['clustering']['real'] += dist_clustering
         results['orbits4']['real'] += dist_4orbits
 
         dist_degree, dist_clustering = compute_basic_stats(real_g_list, pred_g_list)
-        #dist_4cycle = eval.stats.motif_stats(real_g_list, pred_g_list)
+        # dist_4cycle = eval.stats.motif_stats(real_g_list, pred_g_list)
         dist_4orbits = eval.stats.orbit_stats_all(real_g_list, pred_g_list)
         print('degree dist between real and pred at epoch ', epoch_range[i], ': ', dist_degree)
         print('clustering dist between real and pred at epoch ', epoch_range[i], ': ', dist_clustering)
-        #print('4 cycle dist between real and pred at epoch: ', epoch_range[i], dist_4cycle)
+        # print('4 cycle dist between real and pred at epoch: ', epoch_range[i], dist_4cycle)
         print('orbits dist between real and pred at epoch ', epoch_range[i], ': ', dist_4orbits)
         results['deg']['ours'] = min(dist_degree, results['deg']['ours'])
         results['clustering']['ours'] = min(dist_clustering, results['clustering']['ours'])
@@ -513,11 +549,11 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
         out_files['train'].write(str(dist_4orbits) + ',')
 
         dist_degree, dist_clustering = compute_basic_stats(real_g_list, perturbed_g_list_005)
-        #dist_4cycle = eval.stats.motif_stats(real_g_list, perturbed_g_list_005)
+        # dist_4cycle = eval.stats.motif_stats(real_g_list, perturbed_g_list_005)
         dist_4orbits = eval.stats.orbit_stats_all(real_g_list, perturbed_g_list_005)
         print('degree dist between real and perturbed at epoch ', epoch_range[i], ': ', dist_degree)
         print('clustering dist between real and perturbed at epoch ', epoch_range[i], ': ', dist_clustering)
-        #print('4 cycle dist between real and perturbed at epoch: ', epoch_range[i], dist_4cycle)
+        # print('4 cycle dist between real and perturbed at epoch: ', epoch_range[i], dist_4cycle)
         print('orbits dist between real and perturbed at epoch ', epoch_range[i], ': ', dist_4orbits)
         results['deg']['perturbed'] += dist_degree
         results['clustering']['perturbed'] += dist_clustering
@@ -531,8 +567,10 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
                 results['deg'][baseline] = dist_degree
                 results['clustering'][baseline] = dist_clustering
                 results['orbits4'][baseline] = dist_4orbits
-                print('Kron: deg=', dist_degree, ', clustering=', dist_clustering, 
-                        ', orbits4=', dist_4orbits)
+                print(
+                    'Kron: deg=', dist_degree, ', clustering=', dist_clustering,
+                    ', orbits4=', dist_4orbits
+                )
 
         out_files['train'].write('\n')
 
@@ -542,10 +580,10 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
 
     # Write results
     for metric, methods in results.items():
-        line = metric+','+ \
-                str(methods['real'])+','+ \
-                str(methods['ours'])+','+ \
-                str(methods['perturbed'])
+        line = metric + ',' + \
+               str(methods['real']) + ',' + \
+               str(methods['ours']) + ',' + \
+               str(methods['perturbed'])
         for baseline in baselines:
             line += ',' + str(methods[baseline])
         line += '\n'
@@ -556,13 +594,15 @@ def eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
         out_f.close()
 
 
-def eval_performance(datadir, prefix=None, args=None, eval_every=200, out_file_prefix=None,
-        sample_time = 2, baselines={}):
+def eval_performance(
+    datadir, prefix=None, args=None, eval_every=200, out_file_prefix=None,
+    sample_time=2, baselines={}
+):
     if args is None:
         real_graphs_filename = [datadir + f for f in os.listdir(datadir)
-                if re.match(prefix + r'.*real.*\.dat', f)]
+                                if re.match(prefix + r'.*real.*\.dat', f)]
         pred_graphs_filename = [datadir + f for f in os.listdir(datadir)
-                if re.match(prefix + r'.*pred.*\.dat', f)]
+                                if re.match(prefix + r'.*pred.*\.dat', f)]
         eval_list(real_graphs_filename, pred_graphs_filename, prefix, 200)
 
     else:
@@ -571,27 +611,31 @@ def eval_performance(datadir, prefix=None, args=None, eval_every=200, out_file_p
         #              str(epoch) + '_pred_' + str(args.num_layers) + '_' + str(args.bptt) + '_' + str(args.bptt_len) + '.dat' for epoch in range(0,50001,eval_every)]
         # pred_graphs_filename = [datadir + args.graph_save_path + args.note + '_' + args.graph_type + '_' + \
         #          str(epoch) + '_real_' + str(args.num_layers) + '_' + str(args.bptt) + '_' + str(args.bptt_len) + '.dat' for epoch in range(0,50001,eval_every)]
-        
-        real_graph_filename = datadir+args.graph_save_path + args.fname_test + '0.dat'
+
+        real_graph_filename = datadir + args.graph_save_path + args.fname_test + '0.dat'
         # for proposed model
         end_epoch = 3001
         epoch_range = range(eval_every, end_epoch, eval_every)
-        pred_graphs_filename = [datadir+args.graph_save_path + args.fname_pred+str(epoch)+'_'+str(sample_time)+'.dat'
-                for epoch in epoch_range]
+        pred_graphs_filename = [
+            datadir + args.graph_save_path + args.fname_pred + str(epoch) + '_' + str(sample_time) + '.dat'
+            for epoch in epoch_range]
         # for baseline model
-        #pred_graphs_filename = [datadir+args.fname_baseline+'.dat']
+        # pred_graphs_filename = [datadir+args.fname_baseline+'.dat']
 
-        #real_graphs_filename = [datadir + args.graph_save_path + args.note + '_' + args.graph_type + '_' + \
+        # real_graphs_filename = [datadir + args.graph_save_path + args.note + '_' + args.graph_type + '_' + \
         #         str(epoch) + '_real_' + str(args.num_layers) + '_' + str(args.bptt) + '_' + str(
         #         args.bptt_len) + '_' + str(args.gumbel) + '.dat' for epoch in range(10000, 50001, eval_every)]
-        #pred_graphs_filename = [datadir + args.graph_save_path + args.note + '_' + args.graph_type + '_' + \
+        # pred_graphs_filename = [datadir + args.graph_save_path + args.note + '_' + args.graph_type + '_' + \
         #         str(epoch) + '_pred_' + str(args.num_layers) + '_' + str(args.bptt) + '_' + str(
         #         args.bptt_len) + '_' + str(args.gumbel) + '.dat' for epoch in range(10000, 50001, eval_every)]
 
-        eval_list_fname(real_graph_filename, pred_graphs_filename, baselines,
-                        epoch_range=epoch_range, 
-                        eval_every=eval_every,
-                        out_file_prefix=out_file_prefix)
+        eval_list_fname(
+            real_graph_filename, pred_graphs_filename, baselines,
+            epoch_range=epoch_range,
+            eval_every=eval_every,
+            out_file_prefix=out_file_prefix
+        )
+
 
 def process_kron(kron_dir):
     txt_files = []
@@ -606,7 +650,7 @@ def process_kron(kron_dir):
         G_list.append(utils.snap_txt_output_to_nx(os.path.join(kron_dir, filename)))
 
     return G_list
- 
+
 
 if __name__ == '__main__':
     args = Args()
@@ -616,27 +660,36 @@ if __name__ == '__main__':
     feature_parser = parser.add_mutually_exclusive_group(required=False)
     feature_parser.add_argument('--export-real', dest='export', action='store_true')
     feature_parser.add_argument('--no-export-real', dest='export', action='store_false')
-    feature_parser.add_argument('--kron-dir', dest='kron_dir', 
-            help='Directory where graphs generated by kronecker method is stored.')
+    feature_parser.add_argument(
+        '--kron-dir', dest='kron_dir',
+        help='Directory where graphs generated by kronecker method is stored.'
+    )
 
-    parser.add_argument('--testfile', dest='test_file',
-            help='The file that stores list of graphs to be evaluated. Only used when 1 list of '
-                 'graphs is to be evaluated.')
-    parser.add_argument('--dir-prefix', dest='dir_prefix',
-            help='The file that stores list of graphs to be evaluated. Can be used when evaluating multiple'
-                 'models on multiple datasets.')
-    parser.add_argument('--graph-type', dest='graph_type',
-            help='Type of graphs / dataset.')
-    
-    parser.set_defaults(export=False, kron_dir='', test_file='',
-                        dir_prefix='',
-                        graph_type=args.graph_type)
+    parser.add_argument(
+        '--testfile', dest='test_file',
+        help='The file that stores list of graphs to be evaluated. Only used when 1 list of '
+             'graphs is to be evaluated.'
+    )
+    parser.add_argument(
+        '--dir-prefix', dest='dir_prefix',
+        help='The file that stores list of graphs to be evaluated. Can be used when evaluating multiple'
+             'models on multiple datasets.'
+    )
+    parser.add_argument(
+        '--graph-type', dest='graph_type',
+        help='Type of graphs / dataset.'
+    )
+
+    parser.set_defaults(
+        export=False, kron_dir='', test_file='',
+        dir_prefix='',
+        graph_type=args.graph_type
+    )
     prog_args = parser.parse_args()
 
     # dir_prefix = prog_args.dir_prefix
     # dir_prefix = "/dfs/scratch0/jiaxuany0/"
     dir_prefix = args.dir_input
-
 
     time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
     if not os.path.isdir('logs/'):
@@ -656,16 +709,16 @@ if __name__ == '__main__':
 
         if prog_args.graph_type == 'grid':
             graphs = []
-            for i in range(10,20):
-                for j in range(10,20):
-                    graphs.append(nx.grid_2d_graph(i,j))
+            for i in range(10, 20):
+                for j in range(10, 20):
+                    graphs.append(nx.grid_2d_graph(i, j))
             utils.export_graphs_to_txt(graphs, output_prefix)
         elif prog_args.graph_type == 'caveman':
             graphs = []
             for i in range(2, 3):
                 for j in range(30, 81):
                     for k in range(10):
-                        graphs.append(utils.caveman_special(i,j, p_edge=0.3))
+                        graphs.append(utils.caveman_special(i, j, p_edge=0.3))
             utils.export_graphs_to_txt(graphs, output_prefix)
         elif prog_args.graph_type == 'citeseer':
             graphs = utils.citeseer_ego()
@@ -684,14 +737,13 @@ if __name__ == '__main__':
     elif not prog_args.test_file == '':
         # evaluate single .dat file containing list of test graphs (networkx format)
         graphs = utils.load_graph_list(prog_args.test_file)
-        eval_single_list(graphs, dir_input=dir_prefix+'graphs/', dataset_name='grid')
+        eval_single_list(graphs, dir_input=dir_prefix + 'graphs/', dataset_name='grid')
     ## if you don't try kronecker, only the following part is needed
     else:
-        if not os.path.isdir(dir_prefix+'eval_results'):
-            os.makedirs(dir_prefix+'eval_results')
-        evaluation(args_evaluate,dir_input=dir_prefix+"graphs/", dir_output=dir_prefix+"eval_results/",
-                   model_name_all=args_evaluate.model_name_all,dataset_name_all=args_evaluate.dataset_name_all,args=args,overwrite=True)
-
-
-
-
+        if not os.path.isdir(dir_prefix + 'eval_results'):
+            os.makedirs(dir_prefix + 'eval_results')
+        evaluation(
+            args_evaluate, dir_input=dir_prefix + "graphs/", dir_output=dir_prefix + "eval_results/",
+            model_name_all=args_evaluate.model_name_all, dataset_name_all=args_evaluate.dataset_name_all, args=args,
+            overwrite=True
+        )

@@ -1,21 +1,16 @@
 
 import argparse
-import matplotlib.pyplot as plt
-import networkx as nx
-import numpy as np
 import os
-from random import shuffle
+
+import networkx as nx
 import torch
-import torch.nn as nn
-import torch.nn.init as init 
-from torch.autograd import Variable 
-import torch.nn.functional as F
 from torch import optim
+from torch.autograd import Variable
 from torch.optim.lr_scheduler import MultiStepLR
 
 import data
-from baselines.graphvae.model import GraphVAE
 from baselines.graphvae.data import GraphAdjSampler
+from baselines.graphvae.model import GraphVAE
 
 CUDA = 2
 
