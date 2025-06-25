@@ -19,6 +19,9 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y tmux && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 ARG USERNAME=vscode
 RUN useradd -ms /bin/bash $USERNAME
 USER $USERNAME

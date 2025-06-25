@@ -27,7 +27,8 @@ class Args():
         # self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
-        self.graph_type = 'NFHS'
+        self.graph_type = 'NFHS_small'  # NFHS_small is the full version of NFHS dataset but we want a reduction factor to be used
+        # self.graph_type = 'NFHS'  # NFHS is the full version of NFHS dataset without reduction factor
         # self.graph_type = 'enzymes'
         # self.graph_type = 'enzymes_small'
         # self.graph_type = 'barabasi'
@@ -65,7 +66,7 @@ class Args():
         ### training config
         self.num_workers = 4 # num workers to load data, default 4
         self.batch_ratio = 32 # how many batches of samples per epoch, default 32, e.g., 1 epoch = 32 batches
-        self.epochs = 500 # now one epoch means self.batch_ratio x batch_size
+        self.epochs = 3000 # now one epoch means self.batch_ratio x batch_size
         self.epochs_test_start = 100
         self.epochs_test = 100
         self.epochs_log = 100

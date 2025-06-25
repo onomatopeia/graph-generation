@@ -33,9 +33,8 @@ if __name__ == '__main__':
     logging.info(f'Torch is available {torch.cuda.is_available()}')
     # All necessary arguments are defined in args.py
     args = Args()
+    logging.info("Args:\n%s", "\n".join(f"{k} = {v}" for k, v in vars(args).items()))
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
-    logging.info(f'CUDA {args.cuda}')
-    logging.info(f'File name prefix {args.fname}')
     # check if necessary directories exist
     if not os.path.isdir(args.model_save_path):
         os.makedirs(args.model_save_path)
@@ -67,7 +66,7 @@ if __name__ == '__main__':
     graphs_test = graphs[int(0.8 * graphs_len):]
     graphs_train = graphs[0:int(0.8 * graphs_len)]
     graphs_validate = graphs[0:int(0.2 * graphs_len)]
-
+    logging.info('graphs_len %d', graphs_len)
     # if use pre-saved graphs
     # dir_input = "/dfs/scratch0/jiaxuany0/graphs/"
     # fname_test = dir_input + args.note + '_' + args.graph_type + '_' + str(args.num_layers) + '_' + str(
