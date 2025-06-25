@@ -1,3 +1,5 @@
+import time
+import logging
 import os
 import random
 import shutil
@@ -22,12 +24,18 @@ from train import train
 from utils import save_graph_list
 
 if __name__ == '__main__':
-    print(torch.cuda.is_available())
+    time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    if not os.path.isdir('logs/'):
+        os.makedirs('logs/')
+    logging.basicConfig(filename='logs/train' + time_now + '.log', level=logging.INFO)
+
+
+    logging.info(f'Torch is available {torch.cuda.is_available()}')
     # All necessary arguments are defined in args.py
     args = Args()
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
-    print('CUDA', args.cuda)
-    print('File name prefix', args.fname)
+    logging.info(f'CUDA {args.cuda}')
+    logging.info(f'File name prefix {args.fname}')
     # check if necessary directories exist
     if not os.path.isdir(args.model_save_path):
         os.makedirs(args.model_save_path)
@@ -50,7 +58,7 @@ if __name__ == '__main__':
     path = str(Path("tensorboard").joinpath("run" + time).resolve())
     configure(path, flush_secs=5)
 
-    graphs = create_graphs.create(args)
+    graphs = create_graphs.create(args)  # list[nx.Graph]
 
     # split datasets
     random.seed(123)
@@ -73,13 +81,13 @@ if __name__ == '__main__':
     for graph in graphs_validate:
         graph_validate_len += graph.number_of_nodes()
     graph_validate_len /= len(graphs_validate)
-    print('graph_validate_len', graph_validate_len)
+    logging.info('graph_validate_len %.4f', graph_validate_len)
 
     graph_test_len = 0
     for graph in graphs_test:
         graph_test_len += graph.number_of_nodes()
     graph_test_len /= len(graphs_test)
-    print('graph_test_len', graph_test_len)
+    logging.info('graph_test_len %.4f', graph_test_len)
 
     args.max_num_node = max([graphs[i].number_of_nodes() for i in range(len(graphs))])
     max_num_edge = max([graphs[i].number_of_edges() for i in range(len(graphs))])
@@ -87,16 +95,16 @@ if __name__ == '__main__':
 
     # args.max_num_node = 2000
     # show graphs statistics
-    print('total graph num: {}, training set: {}'.format(len(graphs), len(graphs_train)))
-    print('max number node: {}'.format(args.max_num_node))
-    print('max/min number edge: {}; {}'.format(max_num_edge, min_num_edge))
-    print('max previous node: {}'.format(args.max_prev_node))
+    logging.info(f'total graph num: {len(graphs)}, training set: {len(graphs_train)}')
+    logging.info('max number node: {}'.format(args.max_num_node))
+    logging.info('max/min number edge: {}; {}'.format(max_num_edge, min_num_edge))
+    logging.info('max previous node: {}'.format(args.max_prev_node))
 
     # save ground truth graphs
     ## To get train and test set, after loading you need to manually slice
     save_graph_list(graphs, args.graph_save_path + args.fname_train + '0.dat')
     save_graph_list(graphs, args.graph_save_path + args.fname_test + '0.dat')
-    print('train and test graphs saved at: ', args.graph_save_path + args.fname_test + '0.dat')
+    logging.info('train and test graphs saved at: %s', args.graph_save_path + args.fname_test + '0.dat')
 
     ### comment when normal training, for graph completion only
     # p = 0.5
@@ -112,11 +120,11 @@ if __name__ == '__main__':
 
     ### dataset initialization
     if 'nobfs' in args.note:
-        print('nobfs')
+        logging.info('nobfs')
         dataset = Graph_sequence_sampler_pytorch_nobfs(graphs_train, max_num_node=args.max_num_node)
         args.max_prev_node = args.max_num_node - 1
     if 'barabasi_noise' in args.graph_type:
-        print('barabasi_noise')
+        logging.info('barabasi_noise')
         dataset = Graph_sequence_sampler_pytorch_canonical(graphs_train, max_prev_node=args.max_prev_node)
         args.max_prev_node = args.max_num_node - 1
     else:
@@ -166,6 +174,9 @@ if __name__ == '__main__':
             hidden_size=args.hidden_size_rnn_output, num_layers=args.num_layers, has_input=True,
             has_output=True, output_size=1
         ).cuda()
+    else:
+        logging.error('Unknown model type in args.note: %s', args.note)
+        raise ValueError(f'Unknown model type in args.note {args.note}')
 
     ### start training
     train(args, dataset_loader, rnn, output)
