@@ -1,3 +1,4 @@
+import logging
 import concurrent.futures
 import os
 import subprocess as sp
@@ -8,7 +9,7 @@ import numpy as np
 
 import baselines.mmd as mmd
 
-PRINT_TIME = False
+PRINT_TIME = True
 
 def degree_worker(G):
     return np.array(nx.degree_histogram(G))
@@ -21,11 +22,16 @@ def add_tensor(x,y):
         y = np.hstack((y, [0.0] * (support_size - len(y))))
     return x+y
 
+
+
 def degree_stats(graph_ref_list, graph_pred_list, is_parallel=False):
-    ''' Compute the distance between the degree distributions of two unordered sets of graphs.
+    """Compute the Maximum Mean Discrepancy (MMD) to measure the distance between the degree 
+    distributions of two unordered sets of graphs. The distance is in a reproducing kernel Hilber 
+    space (RKHS). MMD is zero if and onfly if the two distribution are the same (assuming a 
+    characteristic kernel, like Gaussian/RBF kernel)
     Args:
       graph_ref_list, graph_target_list: two lists of networkx graphs to be evaluated
-    '''
+    """
     sample_ref = []
     sample_pred = []
     # in case an empty graph is generated
@@ -47,11 +53,12 @@ def degree_stats(graph_ref_list, graph_pred_list, is_parallel=False):
         for i in range(len(graph_pred_list_remove_empty)):
             degree_temp = np.array(nx.degree_histogram(graph_pred_list_remove_empty[i]))
             sample_pred.append(degree_temp)
-    print(len(sample_ref),len(sample_pred))
+    logging.info('len sample_ref: %d, len sample_pred: %d', len(sample_ref), len(sample_pred))
     mmd_dist = mmd.compute_mmd(sample_ref, sample_pred, kernel=mmd.gaussian_emd)
+    logging.info('Degree MMD: %f', mmd_dist)
     elapsed = datetime.now() - prev
     if PRINT_TIME:
-        print('Time computing degree mmd: ', elapsed)
+        logging.info(f'Time computing degree mmd: {elapsed}')
     return mmd_dist
 
 def clustering_worker(param):
@@ -62,6 +69,14 @@ def clustering_worker(param):
     return hist
 
 def clustering_stats(graph_ref_list, graph_pred_list, bins=100, is_parallel=True):
+    """Compute the Maximum Mean Discrepancy (MMD) to measure the distance between the clustering 
+    coefficients' distributions of two unordered sets of graphs. The distance is in a reproducing 
+    kernel Hilber space (RKHS). MMD is zero if and onfly if the two distribution are the same 
+    (assuming a characteristic kernel, like Gaussian/RBF kernel). For unweighted graphs, the 
+    clustering of a node is the fraction of possible triangles through that node that exist.
+    Args:
+      graph_ref_list, graph_target_list: two lists of networkx graphs to be evaluated
+    """
     sample_ref = []
     sample_pred = []
     graph_pred_list_remove_empty = [G for G in graph_pred_list if not G.number_of_nodes() == 0]
@@ -95,11 +110,18 @@ def clustering_stats(graph_ref_list, graph_pred_list, bins=100, is_parallel=True
                     clustering_coeffs_list, bins=bins, range=(0.0, 1.0), density=False)
             sample_pred.append(hist)
     
-    mmd_dist = mmd.compute_mmd(sample_ref, sample_pred, kernel=mmd.gaussian_emd,
-                               sigma=1.0/10, distance_scaling=bins)
+    mmd_dist = mmd.compute_mmd(
+        sample_ref, 
+        sample_pred, 
+        kernel=mmd.gaussian_emd,
+        sigma=1.0/10, 
+        distance_scaling=bins,
+    )
+    logging.info('len sample_ref: %d, len sample_pred: %d', len(sample_ref), len(sample_pred))
+    logging.info('Clustering coefficient MMD: %f', mmd_dist)
     elapsed = datetime.now() - prev
     if PRINT_TIME:
-        print('Time computing clustering mmd: ', elapsed)
+        logging.info(f'Time computing clustering mmd: {elapsed}')
     return mmd_dist
 
 # maps motif/orbit name string to its corresponding list of indices from orca output
@@ -196,11 +218,13 @@ def motif_stats(graph_ref_list, graph_pred_list, motif_type='4cycle', ground_tru
     return mmd_dist
 
 def orbit_stats_all(graph_ref_list, graph_pred_list):
+    """Compute the Maximum Mean Discrepancy (MMD) to measure the distance between the mean number 
+    of distinct node orbits in two unordered sets of graphs."""
     total_counts_ref = []
     total_counts_pred = []
  
     graph_pred_list_remove_empty = [G for G in graph_pred_list if not G.number_of_nodes() == 0]
-
+    prev = datetime.now()
     for G in graph_ref_list:
         try:
             orbit_counts = orca(G)
@@ -209,7 +233,7 @@ def orbit_stats_all(graph_ref_list, graph_pred_list):
         orbit_counts_graph = np.sum(orbit_counts, axis=0) / G.number_of_nodes()
         total_counts_ref.append(orbit_counts_graph)
 
-    for G in graph_pred_list:
+    for G in graph_pred_list_remove_empty:
         try:
             orbit_counts = orca(G)
         except:
@@ -219,13 +243,21 @@ def orbit_stats_all(graph_ref_list, graph_pred_list):
 
     total_counts_ref = np.array(total_counts_ref)
     total_counts_pred = np.array(total_counts_pred)
-    mmd_dist = mmd.compute_mmd(total_counts_ref, total_counts_pred, kernel=mmd.gaussian,
-            is_hist=False, sigma=30.0)
+    mmd_dist = mmd.compute_mmd(
+        total_counts_ref, 
+        total_counts_pred, 
+        kernel=mmd.gaussian,
+        is_hist=False, 
+        sigma=30.0,
+    )
 
-    print('-------------------------')
-    print(np.sum(total_counts_ref, axis=0) / len(total_counts_ref))
-    print('...')
-    print(np.sum(total_counts_pred, axis=0) / len(total_counts_pred))
-    print('-------------------------')
+    logging.info('Orbits MMD: %f', mmd_dist)
+    elapsed = datetime.now() - prev
+    if PRINT_TIME:
+        logging.info(f'Time computing orbits mmd: {elapsed}')
+    logging.info('-------------------------')
+    logging.info(f'Ref: {np.sum(total_counts_ref, axis=0) / len(total_counts_ref)}')
+    logging.info(f'Pred: {np.sum(total_counts_pred, axis=0) / len(total_counts_pred)}')
+    logging.info('-------------------------')
     return mmd_dist
 

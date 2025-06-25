@@ -4,7 +4,7 @@ import os
 import re
 import time
 from random import shuffle
-
+from datetime import datetime
 import networkx as nx
 import numpy as np
 
@@ -24,7 +24,7 @@ class Args_evaluate():
 
         # list of dataset to evaluate
         # use a list of 1 element to evaluate a single dataset
-        self.dataset_name_all = ['caveman', 'grid', 'barabasi', 'citeseer', 'DD', 'NFHS']
+        self.dataset_name_all = ['NFHS']
         # self.dataset_name_all = ['citeseer_small','caveman_small']
         # self.dataset_name_all = ['barabasi_noise0','barabasi_noise2','barabasi_noise4','barabasi_noise6','barabasi_noise8','barabasi_noise10']
         # self.dataset_name_all = ['caveman_small', 'ladder_small', 'grid_small', 'ladder_small', 'enzymes_small', 'barabasi_small','citeseer_small']
@@ -172,7 +172,14 @@ def eval_single_list(graphs, dir_input, dataset_name):
 
 
 def evaluation_epoch(
-    dir_input, fname_output, model_name, dataset_name, args, is_clean=True, epoch_start=1000, epoch_end=3001,
+    dir_input, 
+    fname_output, 
+    model_name, 
+    dataset_name, 
+    args, 
+    is_clean=True, 
+    epoch_start=1000, 
+    epoch_end=3001,
     epoch_step=100
 ):
     with open(fname_output, 'w+') as f:
@@ -192,17 +199,17 @@ def evaluation_epoch(
                 hidden
             ) + '_test_' + str(0) + '.dat'
         elif 'Baseline' in model_name:
-            fname_test = dir_input + model_name + '_' + dataset_name + '_' + str(64) + '_test_' + str(0) + '.dat'
+            fname_test = dir_input + model_name + '_' + dataset_name + '_64_test_0.dat'
         else:
-            fname_test = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
-                hidden
-            ) + '_test_' + str(0) + '.dat'
+            fname_test = (
+                dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) 
+                + '_' + str(hidden) + '_test_' + str(0) + '.dat'
+            )
         try:
             if not os.path.exists(fname_test):
                 return None
             graph_test = utils.load_graph_list(fname_test, is_real=True)
         except Exception as e:
-            print(e)
             logging.error(str(e))
             return None
 
@@ -211,16 +218,19 @@ def evaluation_epoch(
         graph_validate = graph_test[0:int(0.2 * graph_test_len)]  # validate
         graph_test = graph_test[int(0.8 * graph_test_len):]  # test on a hold out test set
 
+        # Print average length of graphs in the test set
         graph_test_aver = 0
         for graph in graph_test:
             graph_test_aver += graph.number_of_nodes()
         graph_test_aver /= len(graph_test)
-        print('test average len', graph_test_aver)
+        logging.info('test average len %.4f', graph_test_aver)
 
         # get performance for proposed approaches
         if 'GraphRNN' in model_name:
             # read test graph
             for epoch in range(epoch_start, epoch_end, epoch_step):
+                logging.info('processing epoch %d', epoch)
+                # only specific graphs have sample_time other than 1
                 for sample_time in range(1, 4):
                     # get filename
                     fname_pred = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(
@@ -229,9 +239,9 @@ def evaluation_epoch(
                     # load graphs
                     try:
                         graph_pred = utils.load_graph_list(fname_pred, is_real=False)  # default False
+                        logging.info('loaded file %s', fname_pred)
                     except Exception as e:
-                        print(e)
-                        logging.error(str(e))
+                        # logging.error(str(e))  -- just makes noise in the logs
                         continue
                     # clean graphs
                     if is_clean:
@@ -239,15 +249,15 @@ def evaluation_epoch(
                     else:
                         shuffle(graph_pred)
                         graph_pred = graph_pred[0:len(graph_test)]
-                    print('len graph_test', len(graph_test))
-                    print('len graph_validate', len(graph_validate))
-                    print('len graph_pred', len(graph_pred))
+                    logging.info('len graph_test %d', len(graph_test))
+                    logging.info('len graph_validate %d', len(graph_validate))
+                    logging.info('len graph_pred %d', len(graph_pred))
 
                     graph_pred_aver = 0
                     for graph in graph_pred:
                         graph_pred_aver += graph.number_of_nodes()
                     graph_pred_aver /= len(graph_pred)
-                    print('pred average len', graph_pred_aver)
+                    logging.info('pred average len %.4f', graph_pred_aver)
 
                     # evaluate MMD test
                     mmd_degree = eval.stats.degree_stats(graph_test, graph_pred)
@@ -274,7 +284,7 @@ def evaluation_epoch(
                         str(mmd_clustering) + ',' +
                         str(mmd_4orbits) + '\n'
                     )
-                    print('degree', mmd_degree, 'clustering', mmd_clustering, 'orbits', mmd_4orbits)
+                    logging.info('degree %f clustering %f orbits %f', mmd_degree, mmd_clustering, mmd_4orbits)
 
         # get internal MMD (MMD between ground truth validation and test sets)
         if model_name == 'Internal':
@@ -313,8 +323,8 @@ def evaluation_epoch(
             # clean graphs
             if is_clean:
                 graph_test, graph_pred = clean_graphs(graph_test, graph_pred)
-            print('len graph_test', len(graph_test))
-            print('len graph_pred', len(graph_pred))
+            logging.info('len graph_test %d', len(graph_test))
+            logging.info('len graph_pred %d', len(graph_pred))
             mmd_degree = eval.stats.degree_stats(graph_test, graph_pred)
             mmd_clustering = eval.stats.clustering_stats(graph_test, graph_pred)
             try:
@@ -332,8 +342,8 @@ def evaluation_epoch(
             # clean graphs
             if is_clean:
                 graph_test, graph_pred = clean_graphs(graph_test, graph_pred)
-            print('len graph_test', len(graph_test))
-            print('len graph_pred', len(graph_pred))
+            logging.info('len graph_test %d', len(graph_test))
+            logging.info('len graph_pred %d', len(graph_pred))
             mmd_degree = eval.stats.degree_stats(graph_test, graph_pred)
             mmd_clustering = eval.stats.clustering_stats(graph_test, graph_pred)
             try:
@@ -357,7 +367,6 @@ def evaluation_epoch(
                 try:
                     graph_pred = utils.load_graph_list(fname_pred, is_real=True)  # default False
                 except:
-                    print('Not found: ' + fname_pred)
                     logging.warning('Not found: ' + fname_pred)
                     continue
                 # clean graphs
@@ -366,15 +375,15 @@ def evaluation_epoch(
                 else:
                     shuffle(graph_pred)
                     graph_pred = graph_pred[0:len(graph_test)]
-                print('len graph_test', len(graph_test))
-                print('len graph_validate', len(graph_validate))
-                print('len graph_pred', len(graph_pred))
+                logging.info('len graph_test %d', len(graph_test))
+                logging.info('len graph_validate %d', len(graph_validate))
+                logging.info('len graph_pred %d', len(graph_pred))
 
                 graph_pred_aver = 0
                 for graph in graph_pred:
                     graph_pred_aver += graph.number_of_nodes()
                 graph_pred_aver /= len(graph_pred)
-                print('pred average len', graph_pred_aver)
+                logging.info('pred average len %.4f', graph_pred_aver)
 
                 # evaluate MMD test
                 mmd_degree = eval.stats.degree_stats(graph_test, graph_pred)
@@ -397,29 +406,45 @@ def evaluation_epoch(
                     ) + ',' + str(mmd_4orbits_validate)
                     + ',' + str(mmd_degree) + ',' + str(mmd_clustering) + ',' + str(mmd_4orbits) + '\n'
                 )
-                print('degree', mmd_degree, 'clustering', mmd_clustering, 'orbits', mmd_4orbits)
+                logging.info('degree %.4f clustering %.4f orbits %.4f', mmd_degree, mmd_clustering, mmd_4orbits)
 
         return True
 
 
-def evaluation(args_evaluate, dir_input, dir_output, model_name_all, dataset_name_all, args, overwrite=True):
-    ''' Evaluate the performance of a set of models on a set of datasets.
-    '''
+def evaluation(
+    args_evaluate, 
+    dir_input, 
+    dir_output, 
+    model_name_all, 
+    dataset_name_all, 
+    args, 
+    overwrite=True,
+):
+    """ Evaluate the performance of a set of models on a set of datasets.
+    """
     for model_name in model_name_all:
+        logging.info("Evaluating model: %s", model_name)
         for dataset_name in dataset_name_all:
+            logging.info("Evaluating dataset: %s", dataset_name)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+            fname_output = dir_output + model_name + '_' + dataset_name + '_' + timestamp + '.csv'
+            logging.info('processing: %s', fname_output)
             # check output exist
-            fname_output = dir_output + model_name + '_' + dataset_name + '.csv'
-            print('processing: ' + dir_output + model_name + '_' + dataset_name + '.csv')
-            logging.info('processing: ' + dir_output + model_name + '_' + dataset_name + '.csv')
             if overwrite == False and os.path.isfile(fname_output):
-                print(dir_output + model_name + '_' + dataset_name + '.csv exists!')
-                logging.info(dir_output + model_name + '_' + dataset_name + '.csv exists!')
+                logging.info('%s exists!', fname_output)
                 continue
             evaluation_epoch(
-                dir_input, fname_output, model_name, dataset_name, args, is_clean=True,
-                epoch_start=args_evaluate.epoch_start, epoch_end=args_evaluate.epoch_end,
+                dir_input, 
+                fname_output, 
+                model_name, 
+                dataset_name, 
+                args, 
+                is_clean=True,
+                epoch_start=args_evaluate.epoch_start, 
+                epoch_end=args_evaluate.epoch_end,
                 epoch_step=args_evaluate.epoch_step
             )
+    logging.info("Evaluation complete")
 
 
 def eval_list_fname(
@@ -652,7 +677,51 @@ def process_kron(kron_dir):
     return G_list
 
 
-if __name__ == '__main__':
+def main():
+    """
+    Main function that handles command-line arguments and controls the evaluation workflow for graph
+    datasets and models. This script is a flexible evaluation tool for graph datasets and models. 
+    Depending on the command-line arguments, it can export ground truth graphs, process Kronecker 
+    graphs, evaluate a single test set, or run batch evaluations over multiple models and datasets.
+    The logic is modular, so you can use it for different evaluation scenarios by changing the 
+    arguments.
+
+    **Argument Parsing Setup**
+
+    * It creates two argument objects: Args() and Args_evaluate().
+    * It sets up an argparse.ArgumentParser to handle command-line options for exporting graphs, 
+    specifying directories, test files, and graph types.
+    
+    **Default Values**
+
+    * It sets default values for arguments, including export, kron_dir, test_file, dir_prefix, 
+    and graph_type.
+
+    **Parse Arguments**
+
+    * It parses the command-line arguments into prog_args.
+    
+    **Directory and Logging Setup**
+
+    * It sets dir_prefix (input directory) from args.dir_input.
+    * It creates a logs directory if it doesn’t exist and sets up logging to a timestamped log file.
+
+    **Main Workflow (Conditional Logic):**
+
+    * **Exporting Ground Truth Graphs:**
+      If --export-real is set, it creates output directories and exports ground truth graphs of 
+      the specified type (e.g., grid, caveman, citeseer) using utility functions.
+    * **Processing Kronecker Graphs:**
+      If --kron-dir is specified, it processes Kronecker-generated graphs and saves them.
+    * **Evaluating a Single Test File:**
+      If --testfile is specified, it loads a list of test graphs and evaluates them against ground 
+      truth.
+    * **General Evaluation:**
+      If none of the above, it evaluates all models and datasets specified in Args_evaluate using 
+      the evaluation function.
+
+    """
+
     args = Args()
     args_evaluate = Args_evaluate()
 
@@ -681,14 +750,13 @@ if __name__ == '__main__':
     )
 
     parser.set_defaults(
-        export=False, kron_dir='', test_file='',
+        export=False, 
+        kron_dir='', 
+        test_file='',
         dir_prefix='',
-        graph_type=args.graph_type
+        graph_type=args.graph_type  # NFHS
     )
     prog_args = parser.parse_args()
-
-    # dir_prefix = prog_args.dir_prefix
-    # dir_prefix = "/dfs/scratch0/jiaxuany0/"
     dir_prefix = args.dir_input
 
     time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -743,7 +811,16 @@ if __name__ == '__main__':
         if not os.path.isdir(dir_prefix + 'eval_results'):
             os.makedirs(dir_prefix + 'eval_results')
         evaluation(
-            args_evaluate, dir_input=dir_prefix + "graphs/", dir_output=dir_prefix + "eval_results/",
-            model_name_all=args_evaluate.model_name_all, dataset_name_all=args_evaluate.dataset_name_all, args=args,
-            overwrite=True
+            args_evaluate, 
+            dir_input=dir_prefix + "graphs/", 
+            dir_output=dir_prefix + "eval_results/",
+            model_name_all=args_evaluate.model_name_all, 
+            dataset_name_all=args_evaluate.dataset_name_all, 
+            args=args,
+            overwrite=True,
         )
+
+
+if __name__ == '__main__':
+    main()
+    

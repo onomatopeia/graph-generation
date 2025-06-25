@@ -27,7 +27,7 @@ class Args():
         # self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
-        self.graph_type = 'NFHS_small'
+        self.graph_type = 'NFHS'
         # self.graph_type = 'enzymes'
         # self.graph_type = 'enzymes_small'
         # self.graph_type = 'barabasi'
