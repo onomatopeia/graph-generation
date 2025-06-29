@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from random import shuffle
 from time import gmtime, strftime
+from datetime import datetime
 
 import torch
 
@@ -23,16 +24,13 @@ from model import GRU_plain, MLP_plain, MLP_VAE_conditional_plain
 from train import train
 from utils import save_graph_list
 
-if __name__ == '__main__':
-    time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-    if not os.path.isdir('logs/'):
-        os.makedirs('logs/')
-    logging.basicConfig(filename='logs/train' + time_now + '.log', level=logging.INFO)
-
-
+def main_training(args: Args):
+    # All necessary arguments are defined in args.py    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    if not os.path.isdir(args.logs_save_path):
+        os.makedirs(args.logs_save_path)
+    logging.basicConfig(filename=args.logs_save_path + args.fname + timestamp + '.log', level=logging.INFO)
     logging.info(f'Torch is available {torch.cuda.is_available()}')
-    # All necessary arguments are defined in args.py
-    args = Args()
     logging.info("Args:\n%s", "\n".join(f"{k} = {v}" for k, v in vars(args).items()))
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
     # check if necessary directories exist
@@ -49,12 +47,11 @@ if __name__ == '__main__':
     if not os.path.isdir(args.nll_save_path):
         os.makedirs(args.nll_save_path)
 
-    time = strftime("%Y%m%d_%H%M%S", gmtime())
-    # logging.basicConfig(filename='logs/train' + time + '.log', level=logging.DEBUG)
+
     if args.clean_tensorboard:
         if os.path.isdir("tensorboard"):
             shutil.rmtree("tensorboard")
-    path = str(Path("tensorboard").joinpath("run" + time).resolve())
+    path = str(Path("tensorboard").joinpath("run" + timestamp).resolve())
     configure(path, flush_secs=5)
 
     graphs = create_graphs.create(args)  # list[nx.Graph]
@@ -185,3 +182,7 @@ if __name__ == '__main__':
 
     ### nll evaluation
     # train_nll(args, dataset_loader, dataset_loader, rnn, output, max_iter = 200, graph_validate_len=graph_validate_len,graph_test_len=graph_test_len)
+
+if __name__ == '__main__':
+    args = Args()
+    main_training(args)

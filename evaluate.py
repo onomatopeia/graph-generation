@@ -14,26 +14,6 @@ from args import Args
 from baselines.baseline_simple import Graph_generator_baseline
 
 
-class Args_evaluate():
-    def __init__(self):
-        # loop over the settings
-        # self.model_name_all = ['GraphRNN_MLP','GraphRNN_RNN','Internal','Noise']
-        # self.model_name_all = ['E-R', 'B-A']
-        self.model_name_all = ['GraphRNN_RNN']
-        # self.model_name_all = ['Baseline_DGMG']
-
-        # list of dataset to evaluate
-        # use a list of 1 element to evaluate a single dataset
-        self.dataset_name_all = ['NFHS']
-        # self.dataset_name_all = ['citeseer_small','caveman_small']
-        # self.dataset_name_all = ['barabasi_noise0','barabasi_noise2','barabasi_noise4','barabasi_noise6','barabasi_noise8','barabasi_noise10']
-        # self.dataset_name_all = ['caveman_small', 'ladder_small', 'grid_small', 'ladder_small', 'enzymes_small', 'barabasi_small','citeseer_small']
-
-        self.epoch_start = 100
-        self.epoch_end = 3001
-        self.epoch_step = 100
-
-
 def find_nearest_idx(array, value):
     idx = (np.abs(array - value)).argmin()
     return idx
@@ -412,7 +392,6 @@ def evaluation_epoch(
 
 
 def evaluation(
-    args_evaluate, 
     dir_input, 
     dir_output, 
     model_name_all, 
@@ -422,17 +401,25 @@ def evaluation(
 ):
     """ Evaluate the performance of a set of models on a set of datasets.
     """
+    logs_dir = 'logs/'
+    if not os.path.isdir(dir_output):
+        os.makedirs(dir_output)
+
     for model_name in model_name_all:
         logging.info("Evaluating model: %s", model_name)
         for dataset_name in dataset_name_all:
             logging.info("Evaluating dataset: %s", dataset_name)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-            fname_output = dir_output + model_name + '_' + dataset_name + '_' + timestamp + '.csv'
+            fname_model_dataset = model_name + '_' + dataset_name + '_' + timestamp
+            fname_output = dir_output + fname_model_dataset + '.csv'
+            fname_log = logs_dir + fname_model_dataset + '.log'
+            logging.basicConfig(filename=fname_log, level=logging.INFO)
             logging.info('processing: %s', fname_output)
             # check output exist
             if overwrite == False and os.path.isfile(fname_output):
                 logging.info('%s exists!', fname_output)
                 continue
+
             evaluation_epoch(
                 dir_input, 
                 fname_output, 
@@ -440,9 +427,9 @@ def evaluation(
                 dataset_name, 
                 args, 
                 is_clean=True,
-                epoch_start=args_evaluate.epoch_start, 
-                epoch_end=args_evaluate.epoch_end,
-                epoch_step=args_evaluate.epoch_step
+                epoch_start=args.epoch_evaluation_start, 
+                epoch_end=args.epoch_evaluation_end,
+                epoch_step=args.epoch_evaluation_step
             )
     logging.info("Evaluation complete")
 
@@ -677,7 +664,7 @@ def process_kron(kron_dir):
     return G_list
 
 
-def main():
+def main_evaluation(args: Args):
     """
     Main function that handles command-line arguments and controls the evaluation workflow for graph
     datasets and models. This script is a flexible evaluation tool for graph datasets and models. 
@@ -721,10 +708,6 @@ def main():
       the evaluation function.
 
     """
-
-    args = Args()
-    args_evaluate = Args_evaluate()
-
     parser = argparse.ArgumentParser(description='Evaluation arguments.')
     feature_parser = parser.add_mutually_exclusive_group(required=False)
     feature_parser.add_argument('--export-real', dest='export', action='store_true')
@@ -758,11 +741,6 @@ def main():
     )
     prog_args = parser.parse_args()
     dir_prefix = args.dir_input
-
-    time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-    if not os.path.isdir('logs/'):
-        os.makedirs('logs/')
-    logging.basicConfig(filename='logs/evaluate' + time_now + '.log', level=logging.INFO)
 
     if prog_args.export:
         if not os.path.isdir('eval_results'):
@@ -811,16 +789,16 @@ def main():
         if not os.path.isdir(dir_prefix + 'eval_results'):
             os.makedirs(dir_prefix + 'eval_results')
         evaluation(
-            args_evaluate, 
             dir_input=dir_prefix + "graphs/", 
             dir_output=dir_prefix + "eval_results/",
-            model_name_all=args_evaluate.model_name_all, 
-            dataset_name_all=args_evaluate.dataset_name_all, 
+            model_name_all=[args.note], 
+            dataset_name_all=[args.graph_type], 
             args=args,
             overwrite=True,
         )
 
 
 if __name__ == '__main__':
-    main()
+    args = Args()
+    main_evaluation(args)
     

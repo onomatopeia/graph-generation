@@ -1,4 +1,5 @@
 import time as tm
+import logging
 
 import numpy as np
 import torch
@@ -82,15 +83,15 @@ def train_vae_epoch(
         z_sgm_max = torch.max(z_lsgms.mul(0.5).exp_().data)
 
         if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
-            print(
+            logging.info(
                 'Epoch: {}/{}, train bce loss: {:.6f}, train kl loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
                     epoch, args.epochs, loss_bce.data[0], loss_kl.data[0], args.graph_type, args.num_layers,
                     args.hidden_size_rnn
                 )
             )
-            print(
-                'z_mu_mean', z_mu_mean, 'z_mu_min', z_mu_min, 'z_mu_max', z_mu_max, 'z_sgm_mean', z_sgm_mean,
-                'z_sgm_min', z_sgm_min, 'z_sgm_max', z_sgm_max
+            logging.info(
+                'z_mu_mean={z_mu_mean}, z_mu_min={z_mu_min}, z_mu_max={z_mu_max}, ' \
+                'z_sgm_mean={z_sgm_mean}, z_sgm_min={z_sgm_min}, z_sgm_max={z_sgm_max}'
             )
 
         # logging
@@ -103,7 +104,7 @@ def train_vae_epoch(
         log_value('z_sgm_min_' + args.fname, z_sgm_min, epoch * args.batch_ratio + batch_idx)
         log_value('z_sgm_max_' + args.fname, z_sgm_max, epoch * args.batch_ratio + batch_idx)
 
-        loss_sum += loss.data[0]
+        loss_sum += loss.item()
     return loss_sum / (batch_idx + 1)
 
 
@@ -165,7 +166,7 @@ def test_vae_partial_epoch(epoch, args, rnn, output, data_loader, save_histogram
         ).cuda()  # discrete prediction
         x_step = Variable(torch.ones(test_batch_size, 1, args.max_prev_node)).cuda()
         for i in range(max_num_node):
-            print('finish node', i)
+            logging.info('finish node', i)
             h = rnn(x_step)
             y_pred_step, _, _ = output(h)
             y_pred[:, i:i + 1, :] = F.sigmoid(y_pred_step)
@@ -229,17 +230,18 @@ def train_mlp_epoch(
         scheduler_output.step()
         scheduler_rnn.step()
 
+        current_loss = loss.item()
         if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
-            print(
+            logging.info(
                 'Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
-                    epoch, args.epochs, loss.data[0], args.graph_type, args.num_layers, args.hidden_size_rnn
+                    epoch, args.epochs, current_loss, args.graph_type, args.num_layers, args.hidden_size_rnn
                 )
             )
 
         # logging
-        log_value('loss_' + args.fname, loss.data[0], epoch * args.batch_ratio + batch_idx)
+        log_value('loss_' + args.fname, current_loss, epoch * args.batch_ratio + batch_idx)
 
-        loss_sum += loss.data[0]
+        loss_sum += current_loss
     return loss_sum / (batch_idx + 1)
 
 
@@ -300,7 +302,7 @@ def test_mlp_partial_epoch(epoch, args, rnn, output, data_loader, save_histogram
         ).cuda()  # discrete prediction
         x_step = Variable(torch.ones(test_batch_size, 1, args.max_prev_node)).cuda()
         for i in range(max_num_node):
-            print('finish node', i)
+            logging.info('finish node', i)
             h = rnn(x_step)
             y_pred_step = output(h)
             y_pred[:, i:i + 1, :] = F.sigmoid(y_pred_step)
@@ -341,7 +343,7 @@ def test_mlp_partial_simple_epoch(epoch, args, rnn, output, data_loader, save_hi
         ).cuda()  # discrete prediction
         x_step = Variable(torch.ones(test_batch_size, 1, args.max_prev_node)).cuda()
         for i in range(max_num_node):
-            print('finish node', i)
+            logging.info('finish node', i)
             h = rnn(x_step)
             y_pred_step = output(h)
             y_pred[:, i:i + 1, :] = F.sigmoid(y_pred_step)
@@ -396,21 +398,22 @@ def train_mlp_forward_epoch(epoch, args, rnn, output, data_loader):
 
         loss = 0
         for j in range(y.size(1)):
-            # print('y_pred',y_pred[0,j,:],'y',y[0,j,:])
+            # logging.info('y_pred',y_pred[0,j,:],'y',y[0,j,:])
             end_idx = min(j + 1, y.size(2))
             loss += binary_cross_entropy_weight(y_pred[:, j, 0:end_idx], y[:, j, 0:end_idx]) * end_idx
 
+        current_loss = loss.item()
         if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
-            print(
+            logging.info(
                 'Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
-                    epoch, args.epochs, loss.data[0], args.graph_type, args.num_layers, args.hidden_size_rnn
+                    epoch, args.epochs, current_loss, args.graph_type, args.num_layers, args.hidden_size_rnn
                 )
             )
 
         # logging
-        log_value('loss_' + args.fname, loss.data[0], epoch * args.batch_ratio + batch_idx)
+        log_value('loss_' + args.fname, current_loss, epoch * args.batch_ratio + batch_idx)
 
-        loss_sum += loss.data[0]
+        loss_sum += current_loss
     return loss_sum / (batch_idx + 1)
 
 
@@ -499,7 +502,7 @@ def train_rnn_epoch(
 
         current_loss = loss.item()
         if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
-            print(
+            logging.info(
                 'Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
                     epoch, args.epochs, current_loss, args.graph_type, args.num_layers, args.hidden_size_rnn
                 )
@@ -624,19 +627,20 @@ def train_rnn_forward_epoch(epoch, args, rnn, output, data_loader):
         output_y = pad_packed_sequence(output_y, batch_first=True)[0]
         # use cross entropy loss
         loss = binary_cross_entropy_weight(y_pred, output_y)
-
+        
+        current_loss = loss.item()
         if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
-            print(
+            logging.info(
                 'Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
-                    epoch, args.epochs, loss.data[0], args.graph_type, args.num_layers, args.hidden_size_rnn
+                    epoch, args.epochs, current_loss, args.graph_type, args.num_layers, args.hidden_size_rnn
                 )
             )
 
         # logging
-        log_value('loss_' + args.fname, loss.data[0], epoch * args.batch_ratio + batch_idx)
+        log_value('loss_' + args.fname, current_loss, epoch * args.batch_ratio + batch_idx)
         # print(y_pred.size())
         feature_dim = y_pred.size(0) * y_pred.size(1)
-        loss_sum += loss.data[0] * feature_dim / y.size(0)
+        loss_sum += current_loss * feature_dim / y.size(0)
     return loss_sum / (batch_idx + 1)
 
 
@@ -651,7 +655,7 @@ def train(args, dataset_train, rnn, output):
 
         args.lr = 0.00001
         epoch = args.load_epoch
-        print('model loaded!, lr: {}'.format(args.lr))
+        logging.info('model loaded!, lr: {}'.format(args.lr))
     else:
         epoch = 1
 
@@ -705,7 +709,7 @@ def train(args, dataset_train, rnn, output):
                 save_graph_list(G_pred, fname)
                 if 'GraphRNN_RNN' in args.note:
                     break
-            print('test done, graphs saved')
+            logging.info('test done, graphs saved')
 
         # save model checkpoint
         if args.save:
@@ -726,7 +730,7 @@ def train_graph_completion(args, dataset_test, rnn, output):
     output.load_state_dict(torch.load(fname))
 
     epoch = args.load_epoch
-    print('model loaded!, epoch: {}'.format(args.load_epoch))
+    logging.info('model loaded!, epoch: {}'.format(args.load_epoch))
 
     for sample_time in range(1, 4):
         if 'GraphRNN_MLP' in args.note:
@@ -736,7 +740,7 @@ def train_graph_completion(args, dataset_test, rnn, output):
         # save graphs
         fname = args.graph_save_path + args.fname_pred + str(epoch) + '_' + str(sample_time) + 'graph_completion.dat'
         save_graph_list(G_pred, fname)
-    print('graph completion done, graphs saved')
+    logging.info('graph completion done, graphs saved')
 
 
 ########### for NLL evaluation
@@ -747,7 +751,7 @@ def train_nll(args, dataset_train, dataset_test, rnn, output, graph_validate_len
     output.load_state_dict(torch.load(fname))
 
     epoch = args.load_epoch
-    print('model loaded!, epoch: {}'.format(args.load_epoch))
+    logging.info('model loaded!, epoch: {}'.format(args.load_epoch))
     fname_output = args.nll_save_path + args.note + '_' + args.graph_type + '.csv'
     with open(fname_output, 'w+') as f:
         f.write(str(graph_validate_len) + ',' + str(graph_test_len) + '\n')
@@ -759,7 +763,7 @@ def train_nll(args, dataset_train, dataset_test, rnn, output, graph_validate_len
             if 'GraphRNN_RNN' in args.note:
                 nll_train = train_rnn_forward_epoch(epoch, args, rnn, output, dataset_train)
                 nll_test = train_rnn_forward_epoch(epoch, args, rnn, output, dataset_test)
-            print('train', nll_train, 'test', nll_test)
+            logging.info('train {nll_train}, test {nll_test}')
             f.write(str(nll_train) + ',' + str(nll_test) + '\n')
 
-    print('NLL evaluation done')
+    logging.info('NLL evaluation done')

@@ -27,8 +27,8 @@ class Args():
         # self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
-        self.graph_type = 'NFHS_small'  # NFHS_small is the full version of NFHS dataset but we want a reduction factor to be used
-        # self.graph_type = 'NFHS'  # NFHS is the full version of NFHS dataset without reduction factor
+        # self.graph_type = 'NFHS_small'  # NFHS_small is the full version of NFHS dataset but we want a reduction factor to be used
+        self.graph_type = 'NFHS'  # NFHS is the full version of NFHS dataset without reduction factor
         # self.graph_type = 'enzymes'
         # self.graph_type = 'enzymes_small'
         # self.graph_type = 'barabasi'
@@ -71,6 +71,9 @@ class Args():
         self.epochs_test = 100
         self.epochs_log = 100
         self.epochs_save = 100
+        self.epoch_evaluation_step = 100
+        self.epoch_evaluation_start = 100
+        self.epoch_evaluation_end = self.epochs + 1
 
         self.lr = 0.003
         self.milestones = [400, 1000]
@@ -87,6 +90,7 @@ class Args():
         self.timing_save_path = self.dir_input+'timing/'
         self.figure_prediction_save_path = self.dir_input+'figures_prediction/'
         self.nll_save_path = self.dir_input+'nll/'
+        self.logs_save_path = self.dir_input+'logs/'
 
 
         self.load = False # if load model, default lr is very low
